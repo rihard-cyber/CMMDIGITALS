@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, Database, RefreshCw } from 'lucide-react';
 
 const ALL_KEYS = [
-  'sapujagat_users', 'sapujagat_areas', 'sapujagat_reports', 'sapujagat_findings',
-  'smpjdc_mutasi_logs', 'smpjdc_attendance_logs', 'smpjdc_complaints', 'smpjdc_theme',
-  'smpjdc_db_version', 'smpjdc_session', 'smpjdc_login_attempts'
+  'cmdigital_users', 'cmdigital_areas', 'cmdigital_reports', 'cmdigital_findings',
+  'cmdigital_mutasi_logs', 'cmdigital_attendance_logs', 'cmdigital_complaints', 'cmdigital_theme',
+  'cmdigital_db_version', 'cmdigital_session', 'cmdigital_login_attempts'
 ];
 
 export default function BackupRestore({ addToast, onResetUsers, onClearAllData }) {
@@ -24,7 +24,7 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
     const pinKeys = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.startsWith('smpjdc_pin_')) pinKeys.push(k);
+      if (k && k.startsWith('cmdigital_pin_')) pinKeys.push(k);
     }
     pinKeys.forEach(k => {
       try { data[k] = localStorage.getItem(k); } catch {}
@@ -40,7 +40,7 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `smpjdc-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `cmdigital-backup-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       setResult({ type: 'success', message: `Backup berhasil! ${Object.keys(data).length} key tersimpan.` });
@@ -61,7 +61,7 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
         const data = JSON.parse(ev.target.result);
         let count = 0;
         Object.entries(data).forEach(([key, value]) => {
-          if (key.startsWith('smpjdc_pin_') || ALL_KEYS.includes(key)) {
+          if (key.startsWith('cmdigital_pin_') || ALL_KEYS.includes(key)) {
             localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
             count++;
           }
@@ -69,105 +69,151 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
         setResult({ type: 'success', message: `Restore berhasil! ${count} key dipulihkan. Refresh halaman untuk melihat perubahan.` });
         if (addToast) addToast(`Restore berhasil! ${count} key dipulihkan.`, 'success');
       } catch (err) {
-        setResult({ type: 'error', message: `File tidak valid: ${err.message}` });
+        setResult({ type: 'error', message: `Gagal restore: ${err.message}` });
       }
       setBusy(false);
     };
     reader.readAsText(file);
-    e.target.value = '';
+  };
+
+  const handleResetUsers = async () => {
+    if (!window.confirm('Yakin ingin mereset semua user?')) return;
+    try {
+      if (onResetUsers) await onResetUsers();
+      setResult({ type: 'success', message: 'User berhasil direset!' });
+      if (addToast) addToast('User berhasil direset!', 'success');
+    } catch (e) {
+      setResult({ type: 'error', message: `Gagal reset: ${e.message}` });
+    }
+  };
+
+  const handleClearAllData = async () => {
+    if (!window.confirm('Yakin ingin menghapus SEMUA data lokal? Tindakan ini tidak bisa dibatalkan.')) return;
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('cmdigital_') || k.startsWith('cmdigital_pin_'))) {
+          localStorage.removeItem(k);
+        }
+      }
+      if (onClearAllData) await onClearAllData();
+      setResult({ type: 'success', message: 'Semua data lokal berhasil dihapus!' });
+      if (addToast) addToast('Semua data lokal berhasil dihapus!', 'success');
+    } catch (e) {
+      setResult({ type: 'error', message: `Gagal hapus: ${e.message}` });
+    }
   };
 
   return (
-    <div className="glass-panel" style={{ padding: '1.5rem', maxWidth: '500px' }}>
-      <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Database size={18} className="text-primary" /> Backup & Restore Data
-      </h3>
+    <div style={{ padding: '1.5rem', maxWidth: '700px', margin: '0 auto' }}>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f8fafc', marginBottom: '1rem' }}>
+        <Database size={20} style={{ marginRight: '0.5rem', color: '#3b82f6' }} />
+        Backup & Restore Data
+      </h2>
 
-      <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-        Ekspor seluruh data sistem ke file JSON, atau impor dari backup sebelumnya.
-        Data backup mencakup users, area, laporan, temuan, dan semua pengaturan.
-      </p>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <button onClick={handleExport} disabled={busy} className="btn-primary" style={{ padding: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
-          <Download size={16} /> {busy ? 'Memproses...' : 'Export Backup (.json)'}
+      <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '1.5rem', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '0.9rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Export Backup</h3>
+        <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Cadangkan semua data lokal (user, laporan, temuan, absensi, komplain, dan tema) ke file JSON.
+        </p>
+        <button
+          onClick={handleExport}
+          disabled={busy}
+          style={{
+            background: busy ? '#475569' : '#10b981',
+            border: 'none',
+            color: 'white',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '8px',
+            fontWeight: 600,
+            cursor: busy ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            opacity: busy ? 0.6 : 1
+          }}
+        >
+          {busy ? <RefreshCw size={16} /> : <Download size={16} />}
+          {busy ? 'Membuat backup...' : 'Unduh Backup JSON'}
         </button>
-
-        <div style={{ position: 'relative' }}>
-          <button onClick={() => fileRef.current?.click()} disabled={busy} className="btn-secondary" style={{ width: '100%', padding: '0.7rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.82rem' }}>
-            <Upload size={16} /> Import Backup (.json)
-          </button>
-          <input ref={fileRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
-        </div>
-
-        {onResetUsers && (
-          <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => {
-                if (window.confirm('PERINGATAN! Tindakan ini akan menghapus semua user saat ini di database Firestore dan menggantinya dengan 11 user default. Apakah Anda yakin?')) {
-                  onResetUsers();
-                }
-              }}
-              disabled={busy}
-              className="btn-danger"
-              style={{
-                width: '100%',
-                padding: '0.7rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                fontSize: '0.82rem',
-                background: 'rgba(239,68,68,0.15)',
-                color: 'var(--color-danger)',
-                border: '1px solid rgba(239,68,68,0.3)'
-              }}
-            >
-              <RefreshCw size={16} /> Reset User Database ke Default
-            </button>
-          </div>
+        {result && result.type === 'success' && (
+          <p style={{ marginTop: '0.75rem', color: '#10b981', fontSize: '0.85rem' }}>{result.message}</p>
         )}
-
-        {onClearAllData && (
-          <div style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-            <button
-              onClick={() => {
-                if (window.confirm('PERINGATAN KERAS! Tindakan ini akan menghapus SELURUH data laporan patroli, temuan, mutasi, absensi, dan komplain dari Firestore dan LocalStorage. Tindakan ini tidak dapat dibatalkan! Apakah Anda yakin?')) {
-                  onClearAllData();
-                }
-              }}
-              disabled={busy}
-              className="btn-danger"
-              style={{
-                width: '100%',
-                padding: '0.7rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.4rem',
-                fontSize: '0.82rem',
-                background: 'rgba(239,68,68,0.15)',
-                color: 'var(--color-danger)',
-                border: '1px solid rgba(239,68,68,0.3)'
-              }}
-            >
-              <RefreshCw size={16} /> Hapus Semua Laporan & Temuan (Wipe Data)
-            </button>
-          </div>
+        {result && result.type === 'error' && (
+          <p style={{ marginTop: '0.75rem', color: '#ef4444', fontSize: '0.85rem' }}>{result.message}</p>
         )}
       </div>
 
-      {result && (
-        <div style={{
-          marginTop: '1rem', padding: '0.6rem 0.8rem', borderRadius: '8px', fontSize: '0.78rem',
-          display: 'flex', alignItems: 'center', gap: '0.5rem',
-          background: result.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-          color: result.type === 'success' ? 'var(--color-success)' : 'var(--color-danger)'
-        }}>
-          {result.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-          <span>{result.message}</span>
+      <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '1.5rem', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '0.9rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Import Restore</h3>
+        <p style={{ color: '#cbd5e1', fontSize: '0.85rem', marginBottom: '1rem' }}>
+          Pulihkan data dari file backup JSON yang sebelumnya diunduh.
+        </p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".json"
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={() => fileRef.current.click()}
+          disabled={busy}
+          style={{
+            background: busy ? '#475569' : '#3b82f6',
+            border: 'none',
+            color: 'white',
+            padding: '0.75rem 1.5rem',
+            borderRadius: '8px',
+            fontWeight: 600,
+            cursor: busy ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            opacity: busy ? 0.6 : 1
+          }}
+        >
+          {busy ? <RefreshCw size={16} /> : <Upload size={16} />}
+          {busy ? 'Memproses restore...' : 'Pilih File & Restore'}
+        </button>
+      </div>
+
+      <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '1.5rem' }}>
+        <h3 style={{ fontSize: '0.9rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Utilitas</h3>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleResetUsers}
+            disabled={busy}
+            style={{
+              background: 'transparent',
+              border: '1px solid #f59e0b',
+              color: '#f59e0b',
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.5 : 1
+            }}
+          >
+            Reset User
+          </button>
+          <button
+            onClick={handleClearAllData}
+            disabled={busy}
+            style={{
+              background: 'transparent',
+              border: '1px solid #ef4444',
+              color: '#ef4444',
+              padding: '0.75rem 1.25rem',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: busy ? 'not-allowed' : 'pointer',
+              opacity: busy ? 0.5 : 1
+            }}
+          >
+            Hapus Semua Data Lokal
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

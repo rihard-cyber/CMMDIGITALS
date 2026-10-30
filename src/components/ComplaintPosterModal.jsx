@@ -4,8 +4,8 @@ import { X, Printer, Download, Sparkles, Building2, ShieldCheck, Wrench, Sparkle
 export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qrApiUrl }) {
   const [themeMode, setThemeMode] = useState('light'); // 'light' (print friendly) or 'dark' (luxury navy)
   const [paperSize, setPaperSize] = useState('a4'); // 'a4' or 'a5'
-  const [hotline, setHotline] = useState(() => localStorage.getItem('smpjdc_poster_hotline') || 'Security & Helpdesk: (021) 5304747 / WhatsApp JDC');
-  const [buildingName, setBuildingName] = useState(() => localStorage.getItem('smpjdc_poster_bldg') || 'JAKARTA DESIGN CENTER');
+  const [hotline, setHotline] = useState(() => localStorage.getItem('cmdigital_poster_hotline') || 'Security & Helpdesk: (021) 5304747 / WhatsApp CMMDIGITAL');
+  const [buildingName, setBuildingName] = useState(() => localStorage.getItem('cmdigital_poster_bldg') || 'CMMDIGITAL BUILDING');
 
   if (!isOpen) return null;
 
@@ -245,7 +245,7 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
             <div class="qr-frame">
               <img src="${qrApiUrl}" class="qr-img" alt="QR Code Komplain" />
               <div class="qr-caption">Arahkan Kamera HP di Sini</div>
-              <div class="qr-subtext">Otomatis membuka Form Tiket Publik JDC</div>
+              <div class="qr-subtext">Otomatis membuka Form Tiket Publik CMMDIGITAL</div>
             </div>
           </div>
 
@@ -284,11 +284,11 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
           <div class="footer-section">
             <div class="footer-info">
               <div class="footer-strong">${hotline}</div>
-              <div>Gedung Jakarta Design Center (JDC) • Layanan Siaga 24 Jam</div>
+              <div>Gedung CMMDIGITAL • Layanan Siaga 24 Jam</div>
             </div>
             <div class="footer-badge">
               <div>SISTEM TIKET RESMI</div>
-              <div>SMP-JDC SYSTEM</div>
+              <div>CMD SYSTEM</div>
             </div>
           </div>
         </div>
@@ -356,7 +356,7 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                Desain Poster & Standee Akrilik Komplain JDC
+                Desain Poster & Standee Akrilik Komplain CMMDIGITAL
               </h3>
               <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                 Siap cetak format A4/A5 untuk dipajang di Lobby, Meja Resepsionis, Koridor Tenant & Area Publik
@@ -470,7 +470,7 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
                 value={buildingName}
                 onChange={e => {
                   setBuildingName(e.target.value);
-                  localStorage.setItem('smpjdc_poster_bldg', e.target.value);
+                  localStorage.setItem('cmdigital_poster_bldg', e.target.value);
                 }}
                 className="modern-input"
                 style={{ fontSize: '0.75rem', width: '100%', padding: '0.4rem 0.6rem' }}
@@ -486,7 +486,7 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
                 value={hotline}
                 onChange={e => {
                   setHotline(e.target.value);
-                  localStorage.setItem('smpjdc_poster_hotline', e.target.value);
+                  localStorage.setItem('cmdigital_poster_hotline', e.target.value);
                 }}
                 className="modern-input"
                 style={{ fontSize: '0.75rem', width: '100%', padding: '0.4rem 0.6rem' }}
@@ -598,7 +598,7 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
                     ARAHKAN KAMERA HP
                   </div>
                   <div style={{ fontSize: '0.48rem', color: '#64748b' }}>
-                    Buka Form Pengaduan JDC
+                    Buka Form Pengaduan CMMDIGITAL
                   </div>
                 </div>
               </div>
@@ -634,10 +634,10 @@ export default function ComplaintPosterModal({ isOpen, onClose, complaintUrl, qr
               <div style={{ borderTop: `1px solid ${isDark ? '#1e3a8a' : '#e2e8f0'}`, paddingTop: '0.4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '0.55rem', fontWeight: 800 }}>{hotline}</div>
-                  <div style={{ fontSize: '0.48rem', color: isDark ? '#94a3b8' : '#64748b' }}>Gedung Jakarta Design Center (JDC)</div>
+                  <div style={{ fontSize: '0.48rem', color: isDark ? '#94a3b8' : '#64748b' }}>Gedung CMMDIGITAL</div>
                 </div>
                 <div style={{ fontSize: '0.48rem', fontWeight: 700, color: isDark ? '#38bdf8' : '#0284c7' }}>
-                  SISTEM RESMI JDC
+                  SISTEM RESMI CMMDIGITAL
                 </div>
               </div>
             </div>

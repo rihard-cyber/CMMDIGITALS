@@ -24,12 +24,12 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
   const [copied, setCopied] = useState(false);
 
   const [customBaseUrl, setCustomBaseUrl] = useState(() => {
-    const saved = localStorage.getItem('smpjdc_custom_complaint_url');
+    const saved = localStorage.getItem('cmdigital_custom_complaint_url');
     if (saved) return saved;
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
     if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('::1') || origin.startsWith('file:')) {
-      return 'https://rihard-cyber.github.io/SMP-JDC/';
+      return 'https://rihard-cyber.github.io/CMMDIGITAL/';
     }
     return origin + pathname;
   });
@@ -93,7 +93,7 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
   const handleExportComplaintPDF = () => {
     const ok = exportTableToPdf({
       title: 'Tiketing Komplain / Pengaduan Tenant, Pengunjung',
-      fileName: `tiket-komplain-smpjdc-${formatDateForFile()}`,
+      fileName: `tiket-komplain-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Filter Status', value: filter === 'all' ? 'Semua' : filter },
         { label: 'Pencarian', value: search || '-' },
@@ -191,7 +191,7 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
                 className="btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                 <Copy size={12} /> {copied ? 'Tersalin!' : 'Salin Link'}
               </button>
-              <a href={qrApiUrl} download="smpjdc-complaint-qr.png" className="btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+              <a href={qrApiUrl} download="cmdigital-complaint-qr.png" className="btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
                 <Download size={12} /> Download QR
               </a>
             </div>
@@ -207,18 +207,18 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
                   onChange={(e) => {
                     const val = e.target.value;
                     setCustomBaseUrl(val);
-                    localStorage.setItem('smpjdc_custom_complaint_url', val);
+                    localStorage.setItem('cmdigital_custom_complaint_url', val);
                   }}
-                  placeholder="https://rihard-cyber.github.io/SMP-JDC/"
+                  placeholder="https://rihard-cyber.github.io/CMMDIGITAL/"
                   className="modern-input"
                   style={{ flex: 1, fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const defaultUrl = 'https://rihard-cyber.github.io/SMP-JDC/';
+                    const defaultUrl = 'https://rihard-cyber.github.io/CMMDIGITAL/';
                     setCustomBaseUrl(defaultUrl);
-                    localStorage.setItem('smpjdc_custom_complaint_url', defaultUrl);
+                    localStorage.setItem('cmdigital_custom_complaint_url', defaultUrl);
                   }}
                   className="btn-secondary"
                   style={{ padding: '0.35rem 0.65rem', fontSize: '0.7rem', whiteSpace: 'nowrap' }}

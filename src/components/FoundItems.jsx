@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC - Found Items / Lost & Found (Penemuan Barang)
+ *   CMMDIGITAL - Found Items / Lost & Found (Penemuan Barang)
  *   Component: FoundItems.jsx
  *   Signed by: Richard Meha (by -Richard)
  *   Description: Dashboard Penemuan Barang (gaya ComplaintAdmin)
@@ -337,8 +337,8 @@ export default function FoundItems({
   const handleExportPDF = () => {
     const ok = exportTableToPdf({
       title: 'Laporan Penemuan Barang (Lost & Found)',
-      subtitle: 'SMPJDC - Jakarta Design Center',
-      fileName: `laporan-penemuan-barang-smpjdc-${formatDateForFile()}`,
+      subtitle: 'CMMDIGITAL - Multi-Tenant Building',
+      fileName: `laporan-penemuan-barang-cmdigital-${formatDateForFile()}`,
       orientation: 'landscape',
       meta: [
         { label: 'Total Data', value: filtered.length },

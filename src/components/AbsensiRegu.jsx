@@ -187,8 +187,8 @@ export default function AbsensiRegu({
     }
 
     const ok = exportTableToPdf({
-      title: 'Laporan Rekapitulasi Lemburan Keamanan JDC',
-      fileName: `rekap-lembur-smpjdc-${selectedLemburMonth}`,
+      title: 'Laporan Rekapitulasi Lemburan Keamanan CMD',
+      fileName: `rekap-lembur-cmdigital-${selectedLemburMonth}`,
       meta: [
         { label: 'Bulan Rekap', value: selectedLemburMonth },
         { label: 'Regu Pantau', value: selectedRegu },
@@ -253,7 +253,7 @@ export default function AbsensiRegu({
     );
   }, [rows, memberSearch]);
 
-  // Get time string by shift code (all JDC codes)
+  // Get time string by shift code (all CMD codes)
   const getJamDinas = (shiftCode) => {
     const info = SHIFT_CODES[shiftCode];
     if (info) return info.jam.replace(':', '.').replace(' - ', ' - ').replace(/:(\d{2})/g, '.$1');
@@ -475,7 +475,7 @@ export default function AbsensiRegu({
     }
     
     const hariTanggal = `${hari}, ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-    const text = `🛡️ *NOTIFIKASI PLOTTING PENJAGAAN JDC* 🛡️
+    const text = `🛡️ *NOTIFIKASI PLOTTING PENJAGAAN CMD* 🛡️
 
 Halo *${member.nama}*, berikut adalah detail plotting dinas Anda hari ini:
 
@@ -485,9 +485,9 @@ Halo *${member.nama}*, berikut adalah detail plotting dinas Anda hari ini:
 📍 Pos Jaga: *${statusInfo.plottingPos}*
 🟢 Status Kehadiran: *${statusInfo.statusLabel}*
 
-Harap standby di pos masing-masing dan lakukan patroli berkala menggunakan aplikasi JDC.
+Harap standby di pos masing-masing dan lakukan patroli berkala menggunakan aplikasi CMD.
 
-_Sistem Manajemen Keamanan JDC_`;
+_Sistem Manajemen Keamanan CMD_`;
 
     const encodedText = encodeURIComponent(text);
     if (cleanHp) {
@@ -538,7 +538,7 @@ _Sistem Manajemen Keamanan JDC_`;
 
     const ok = exportTableToPdf({
       title: 'Absensi & Plotting Penjagaan',
-      fileName: `absensi-plotting-smpjdc-${formatDateForFile()}`,
+      fileName: `absensi-plotting-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Regu Aktif', value: selectedRegu },
         { label: 'Shift Aktif', value: selectedShift },
@@ -807,7 +807,7 @@ _Sistem Manajemen Keamanan JDC_`;
                         <Users size={14} className="text-warning" /> STATUS KONEKSI (LOGIN)
                       </div>
                       <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>
-                        {onlineCount} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>Online JDC</span>
+                        {onlineCount} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 500 }}>Online CMD</span>
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.4rem' }}>
                         Active: <strong>{onlineCount}</strong> • Standby/Offline: <strong>{offlineCount}</strong>
@@ -1775,7 +1775,7 @@ _Sistem Manajemen Keamanan JDC_`;
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)', paddingBottom: '0.65rem' }}>
               <h3 style={{ fontSize: '0.98rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-primary)' }}>
                 <Shield size={18} className="text-primary" />
-                <span>Rincian Keamanan Presensi JDC</span>
+                <span>Rincian Keamanan Presensi CMD</span>
               </h3>
               <button 
                 onClick={() => setSelectedAuditLog(null)} 

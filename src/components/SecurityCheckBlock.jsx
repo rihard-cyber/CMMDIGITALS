@@ -570,7 +570,7 @@ export default function SecurityCheckBlock({ onPassed, theme = 'dark' }) {
           <div style={{ marginTop: '1.25rem' }}>
             <h2 className="shield-title">Verifikasi Keamanan</h2>
             <p className={hasErrors ? 'shield-failed-subtitle' : 'shield-subtitle'}>
-              {hasErrors ? 'Akses Perangkat Diblokir' : 'SMPJDC Core Security'}
+              {hasErrors ? 'Akses Perangkat Diblokir' : 'CMMDIGITAL Core Security'}
             </p>
           </div>
         </div>

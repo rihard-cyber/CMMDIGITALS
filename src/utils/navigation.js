@@ -1,14 +1,14 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Navigation & Back Button Interceptor Utilities
  *   Description: Global registry for custom back handlers,
  *                managing web stack pop interceptions.
  * =======================================================
  */
 
-if (!window.smpjdc_back_handlers) {
-  window.smpjdc_back_handlers = [];
+if (!window.cmdigital_back_handlers) {
+  window.cmdigital_back_handlers = [];
 }
 
 /**
@@ -20,11 +20,11 @@ if (!window.smpjdc_back_handlers) {
  * @returns {Function} Unregister function to cleanup on component unmount.
  */
 export function registerBackHandler(handler) {
-  window.smpjdc_back_handlers.push(handler);
+  window.cmdigital_back_handlers.push(handler);
   
   // Return cleanup function
   return () => {
-    window.smpjdc_back_handlers = window.smpjdc_back_handlers.filter(h => h !== handler);
+    window.cmdigital_back_handlers = window.cmdigital_back_handlers.filter(h => h !== handler);
   };
 }
 
@@ -34,11 +34,11 @@ export function registerBackHandler(handler) {
  * @returns {boolean} True if any handler intercepted and processed the back action.
  */
 export function executeBackHandlers() {
-  if (window.smpjdc_back_handlers && window.smpjdc_back_handlers.length > 0) {
+  if (window.cmdigital_back_handlers && window.cmdigital_back_handlers.length > 0) {
     // Execute from newest to oldest
-    for (let i = window.smpjdc_back_handlers.length - 1; i >= 0; i--) {
+    for (let i = window.cmdigital_back_handlers.length - 1; i >= 0; i--) {
       try {
-        const handled = window.smpjdc_back_handlers[i]();
+        const handled = window.cmdigital_back_handlers[i]();
         if (handled) {
           return true;
         }

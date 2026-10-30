@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Download, X, Smartphone, ArrowUpCircle } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 
-const DISMISS_KEY = 'smpjdc_pwa_dismissed_until';
-const SESSION_KEY = 'smpjdc_pwa_prompt_shown';
+const DISMISS_KEY = 'cmdigital_pwa_dismissed_until';
+const SESSION_KEY = 'cmdigital_pwa_prompt_shown';
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function readDismissedUntil() {
@@ -118,7 +118,7 @@ export default function PWAInstallPrompt() {
   if (!showPrompt) return null;
 
   return (
-    <div className="pwa-prompt-overlay" role="dialog" aria-modal="false" aria-label="Pasang aplikasi SMPJDC">
+    <div className="pwa-prompt-overlay" role="dialog" aria-modal="false" aria-label="Pasang aplikasi CMMDIGITAL">
       <div className="pwa-prompt-card">
         <div className="pwa-prompt-header">
           <div className="pwa-prompt-icon-container">
@@ -135,7 +135,7 @@ export default function PWAInstallPrompt() {
             <>
               <h3>Pasang di Layar Utama</h3>
               <p>
-                Tambahkan SMPJDC ke layar utama untuk akses patroli lebih cepat, tanpa membuka browser.
+                Tambahkan CMMDIGITAL ke layar utama untuk akses patroli lebih cepat, tanpa membuka browser.
               </p>
               <div className="ios-instructions">
                 <p className="ios-step">
@@ -150,7 +150,7 @@ export default function PWAInstallPrompt() {
             </>
           ) : (
             <>
-              <h3>Pasang Aplikasi SMPJDC</h3>
+              <h3>Pasang Aplikasi CMMDIGITAL</h3>
               <p>
                 Buka lebih cepat dari beranda, layar penuh, dan notifikasi patroli tetap aktif.
               </p>

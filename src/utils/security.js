@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Security & Anti-Fraud Utilities
  *   Signed by: Richard Meha (by -Richard)
  *   Last Maintained: 2026-06-07
@@ -16,7 +16,7 @@ const DeviceSecurity = registerPlugin('DeviceSecurity');
 // Simple hash for PIN (not crypto-grade, prevents casual reading via DevTools)
 export function hashPin(pin) {
   let hash = 0;
-  const salted = 'smpjdc_' + pin + '_2026';
+  const salted = 'cmdigital_' + pin + '_2026';
   for (let i = 0; i < salted.length; i++) {
     const char = salted.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
@@ -54,14 +54,14 @@ export function createSession(userId) {
 export function validateSession(session) {
   if (!session || !session.token || !session.userId || !session.expiresAt) return false;
   if (Date.now() > session.expiresAt) {
-    localStorage.removeItem('smpjdc_session');
+    localStorage.removeItem('cmdigital_session');
     return false;
   }
   
   // Auto-extend session expiration by another 30 days
   try {
     session.expiresAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-    localStorage.setItem('smpjdc_session', JSON.stringify(session));
+    localStorage.setItem('cmdigital_session', JSON.stringify(session));
   } catch (e) {
     console.warn("Gagal memperbarui persistensi sesi:", e);
   }
@@ -70,7 +70,7 @@ export function validateSession(session) {
 }
 
 // ── Anti-Tamper: Sign & Verify User Data ──────────────────────────────────────
-const STORAGE_SECRET = 'smpjdc_2026_antitamper_';
+const STORAGE_SECRET = 'cmdigital_2026_antitamper_';
 
 function computeSignature(data) {
   const raw = STORAGE_SECRET + JSON.stringify(data) + STORAGE_SECRET;
@@ -120,7 +120,7 @@ export function verifyRoleInSession(userId, role, token) {
 }
 
 // Rate limiting
-const ATTEMPT_KEY = 'smpjdc_login_attempts';
+const ATTEMPT_KEY = 'cmdigital_login_attempts';
 
 export function getLoginAttempts(nrp) {
   try {
@@ -170,9 +170,9 @@ export function recordLoginAttempt(nrp, success) {
 export function migratePins(users) {
   let changed = false;
   users.forEach(u => {
-    const stored = localStorage.getItem(`smpjdc_pin_${u.id}`);
+    const stored = localStorage.getItem(`cmdigital_pin_${u.id}`);
     if (stored && !stored.startsWith('h')) {
-      localStorage.setItem(`smpjdc_pin_${u.id}`, hashPin(stored));
+      localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(stored));
       changed = true;
     }
     if (u.pin && !u.pin.startsWith('h')) {

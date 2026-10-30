@@ -1,5 +1,5 @@
 /* =========================================================
-   🚀 ULTIMATE ANTI-GRAVITY CSS - OPTIMIZED FOR SMPJDC 🚀
+   🚀 ULTIMATE ANTI-GRAVITY CSS - OPTIMIZED FOR CMMDIGITAL 🚀
    Fungsi: Mengunci layout agar 100% statis tanpa merusak responsivitas
    ========================================================= */
 
@@ -108,7 +108,7 @@ table td, table th {
     white-space: normal;
 }
 
-/* SMPJDC - SISTEM MANAGEMENT KEAMANAN JDC: Modern Design Tokens & Styling */
+/* CMMDIGITAL - SISTEM MANAGEMENT MULTI-TENANT: Modern Design Tokens & Styling */
 
 :root {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;

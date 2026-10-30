@@ -89,40 +89,40 @@ const BarcodeGenerator = lazy(() => import('./components/BarcodeGenerator'));
 const ComplaintAdmin = lazy(() => import('./components/ComplaintAdmin'));
 const FoundItems = lazy(() => import('./components/FoundItems'));
 
-const DB_VERSION_KEY = 'smpjdc_db_version';
+const DB_VERSION_KEY = 'cmdigital_db_version';
 const CURRENT_DB_VERSION = '5.2-stable';
 
 const INITIAL_AREAS = [
-  { id: 'jdc-bsmt-b-1',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Basement',          nomorTitik: '1',  zona: 'B',              titik: 'Depan R. Elektrik',                 qrCode: 'JDC-BSMT-B-1' },
-  { id: 'jdc-bsmt-a-2',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Basement',          nomorTitik: '2',  zona: 'A',              titik: 'R. Ganti Pakaian Security',          qrCode: 'JDC-BSMT-A-2' },
-  { id: 'jdc-lt01-a-3',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '1',                 nomorTitik: '3',  zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'JDC-LT01-A-3' },
-  { id: 'jdc-lt01-b-4',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '1',                 nomorTitik: '4',  zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'JDC-LT01-B-4' },
-  { id: 'jdc-lt02-b-5',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '2',                 nomorTitik: '5',  zona: 'B',              titik: 'Tangga Sudut Pantry',               qrCode: 'JDC-LT02-B-5' },
-  { id: 'jdc-lt02-a-6',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '2',                 nomorTitik: '6',  zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'JDC-LT02-A-6' },
-  { id: 'jdc-lt03-a-7',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '3',                 nomorTitik: '7',  zona: 'A',              titik: 'Tangga Sudut Staff Security',       qrCode: 'JDC-LT03-A-7' },
-  { id: 'jdc-lt03-b-8',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '3',                 nomorTitik: '8',  zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'JDC-LT03-B-8' },
-  { id: 'jdc-lt04-b-9',  gedung: 'SMPJDC - Jakarta Design Center', lantai: '4',                 nomorTitik: '9',  zona: 'B',              titik: 'Tangga Sudut Pantry',               qrCode: 'JDC-LT04-B-9' },
-  { id: 'jdc-lt04-a-10', gedung: 'SMPJDC - Jakarta Design Center', lantai: '4',                 nomorTitik: '10', zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'JDC-LT04-A-10' },
-  { id: 'jdc-lt05-b-11', gedung: 'SMPJDC - Jakarta Design Center', lantai: '5',                 nomorTitik: '11', zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'JDC-LT05-B-11' },
-  { id: 'jdc-lt05-a-12', gedung: 'SMPJDC - Jakarta Design Center', lantai: '5',                 nomorTitik: '12', zona: 'A',              titik: 'Tangga Sudut R. Rapat JDC Office', qrCode: 'JDC-LT05-A-12' },
-  { id: 'jdc-lt06-a-13', gedung: 'SMPJDC - Jakarta Design Center', lantai: '6',                 nomorTitik: '13', zona: 'A',              titik: 'Tangga Sudut Mushola',              qrCode: 'JDC-LT06-A-13' },
-  { id: 'jdc-lt06-b-14', gedung: 'SMPJDC - Jakarta Design Center', lantai: '6',                 nomorTitik: '14', zona: 'B',              titik: 'Depan Gudang Banquet / R.Carnition', qrCode: 'JDC-LT06-B-14' },
-  { id: 'jdc-hd-c-15',   gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Depan',     nomorTitik: '15', zona: 'C',              titik: 'Coridor IAI DKI',                   qrCode: 'JDC-HD-C-15' },
-  { id: 'jdc-hd-a-16',   gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Depan',     nomorTitik: '16', zona: 'A',              titik: 'Ruang Chiller',                     qrCode: 'JDC-HD-A-16' },
-  { id: 'jdc-hd-lobby-17', gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Depan',   nomorTitik: '17', zona: 'Lobby',           titik: 'Luar ATM Bank Mandiri',              qrCode: 'JDC-HD-LOBBY-17' },
-  { id: 'jdc-hd-hd-18',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Depan',     nomorTitik: '18', zona: 'Halaman Depan',    titik: 'Pos Keluar',                        qrCode: 'JDC-HD-HD-18' },
-  { id: 'jdc-hd-hd-19',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Depan',     nomorTitik: '19', zona: 'Halaman Depan',    titik: 'Pos Masuk',                         qrCode: 'JDC-HD-HD-19' },
-  { id: 'jdc-hskn-a-20', gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Samping Kanan', nomorTitik: '20', zona: 'A',              titik: 'Tiang Canopy Basement',             qrCode: 'JDC-HSKN-A-20' },
-  { id: 'jdc-hskn-ps-21', gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Samping Kanan', nomorTitik: '21', zona: 'Posco Security',   titik: 'Posco OO',                          qrCode: 'JDC-HSKN-PS-21' },
-  { id: 'jdc-hskn-pt-22', gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Samping Kanan', nomorTitik: '22', zona: 'Petugas Teknik',   titik: 'R. Teknik',                         qrCode: 'JDC-HSKN-PT-22' },
-  { id: 'jdc-hb-hb-23',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '23', zona: 'Halaman Belakang',  titik: 'Tembok Belakang Gardu Genset',       qrCode: 'JDC-HB-HB-23' },
-  { id: 'jdc-hb-hb-24',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '24', zona: 'Halaman Belakang',  titik: 'Tembok Ujung Parkir Motor',          qrCode: 'JDC-HB-HB-24' },
-  { id: 'jdc-hb-hb-25',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '25', zona: 'Halaman Belakang',  titik: 'Tembok Depan Gardu PLN',            qrCode: 'JDC-HB-HB-25' },
-  { id: 'jdc-hb-hb-26',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '26', zona: 'Halaman Belakang',  titik: 'Kantin Belakang',                    qrCode: 'JDC-HB-HB-26' },
-  { id: 'jdc-hb-lp-27',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '27', zona: 'Lapangan Padel',     titik: 'Lap Padel I',                       qrCode: 'JDC-HB-LP-27' },
-  { id: 'jdc-hb-lp-28',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '28', zona: 'Lapangan Padel',     titik: 'Lap Padel II',                      qrCode: 'JDC-HB-LP-28' },
-  { id: 'jdc-hb-ap-29',  gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Belakang',  nomorTitik: '29', zona: 'Area Padel',         titik: 'Pintu Padel',                       qrCode: 'JDC-HB-AP-29' },
-  { id: 'jdc-hskr-b-30', gedung: 'SMPJDC - Jakarta Design Center', lantai: 'Halaman Samping Kiri', nomorTitik: '30', zona: 'B',              titik: 'Kopi Tuku',                         qrCode: 'JDC-HSKR-B-30' },
+  { id: 'cmd-bsmt-b-1',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Basement',          nomorTitik: '1',  zona: 'B',              titik: 'Depan R. Elektrik',                 qrCode: 'CMD-BSMT-B-1' },
+  { id: 'cmd-bsmt-a-2',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Basement',          nomorTitik: '2',  zona: 'A',              titik: 'R. Ganti Pakaian Security',          qrCode: 'CMD-BSMT-A-2' },
+  { id: 'cmd-lt01-a-3',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '1',                 nomorTitik: '3',  zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'CMD-LT01-A-3' },
+  { id: 'cmd-lt01-b-4',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '1',                 nomorTitik: '4',  zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'CMD-LT01-B-4' },
+  { id: 'cmd-lt02-b-5',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '2',                 nomorTitik: '5',  zona: 'B',              titik: 'Tangga Sudut Pantry',               qrCode: 'CMD-LT02-B-5' },
+  { id: 'cmd-lt02-a-6',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '2',                 nomorTitik: '6',  zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'CMD-LT02-A-6' },
+  { id: 'cmd-lt03-a-7',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '3',                 nomorTitik: '7',  zona: 'A',              titik: 'Tangga Sudut Staff Security',       qrCode: 'CMD-LT03-A-7' },
+  { id: 'cmd-lt03-b-8',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '3',                 nomorTitik: '8',  zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'CMD-LT03-B-8' },
+  { id: 'cmd-lt04-b-9',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '4',                 nomorTitik: '9',  zona: 'B',              titik: 'Tangga Sudut Pantry',               qrCode: 'CMD-LT04-B-9' },
+  { id: 'cmd-lt04-a-10', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '4',                 nomorTitik: '10', zona: 'A',              titik: 'Tangga Sudut BNI 46',               qrCode: 'CMD-LT04-A-10' },
+  { id: 'cmd-lt05-b-11', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '5',                 nomorTitik: '11', zona: 'B',              titik: 'Tangga Sudut Gardu PLN',            qrCode: 'CMD-LT05-B-11' },
+  { id: 'cmd-lt05-a-12', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '5',                 nomorTitik: '12', zona: 'A',              titik: 'Tangga Sudut R. Rapat CMD Office', qrCode: 'CMD-LT05-A-12' },
+  { id: 'cmd-lt06-a-13', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '6',                 nomorTitik: '13', zona: 'A',              titik: 'Tangga Sudut Mushola',              qrCode: 'CMD-LT06-A-13' },
+  { id: 'cmd-lt06-b-14', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: '6',                 nomorTitik: '14', zona: 'B',              titik: 'Depan Gudang Banquet / R.Carnition', qrCode: 'CMD-LT06-B-14' },
+  { id: 'cmd-hd-c-15',   gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Depan',     nomorTitik: '15', zona: 'C',              titik: 'Coridor IAI DKI',                   qrCode: 'CMD-HD-C-15' },
+  { id: 'cmd-hd-a-16',   gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Depan',     nomorTitik: '16', zona: 'A',              titik: 'Ruang Chiller',                     qrCode: 'CMD-HD-A-16' },
+  { id: 'cmd-hd-lobby-17', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Depan',   nomorTitik: '17', zona: 'Lobby',           titik: 'Luar ATM Bank Mandiri',              qrCode: 'CMD-HD-LOBBY-17' },
+  { id: 'cmd-hd-hd-18',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Depan',     nomorTitik: '18', zona: 'Halaman Depan',    titik: 'Pos Keluar',                        qrCode: 'CMD-HD-HD-18' },
+  { id: 'cmd-hd-hd-19',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Depan',     nomorTitik: '19', zona: 'Halaman Depan',    titik: 'Pos Masuk',                         qrCode: 'CMD-HD-HD-19' },
+  { id: 'cmd-hskn-a-20', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Samping Kanan', nomorTitik: '20', zona: 'A',              titik: 'Tiang Canopy Basement',             qrCode: 'CMD-HSKN-A-20' },
+  { id: 'cmd-hskn-ps-21', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Samping Kanan', nomorTitik: '21', zona: 'Posco Security',   titik: 'Posco OO',                          qrCode: 'CMD-HSKN-PS-21' },
+  { id: 'cmd-hskn-pt-22', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Samping Kanan', nomorTitik: '22', zona: 'Petugas Teknik',   titik: 'R. Teknik',                         qrCode: 'CMD-HSKN-PT-22' },
+  { id: 'cmd-hb-hb-23',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '23', zona: 'Halaman Belakang',  titik: 'Tembok Belakang Gardu Genset',       qrCode: 'CMD-HB-HB-23' },
+  { id: 'cmd-hb-hb-24',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '24', zona: 'Halaman Belakang',  titik: 'Tembok Ujung Parkir Motor',          qrCode: 'CMD-HB-HB-24' },
+  { id: 'cmd-hb-hb-25',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '25', zona: 'Halaman Belakang',  titik: 'Tembok Depan Gardu PLN',            qrCode: 'CMD-HB-HB-25' },
+  { id: 'cmd-hb-hb-26',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '26', zona: 'Halaman Belakang',  titik: 'Kantin Belakang',                    qrCode: 'CMD-HB-HB-26' },
+  { id: 'cmd-hb-lp-27',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '27', zona: 'Lapangan Padel',     titik: 'Lap Padel I',                       qrCode: 'CMD-HB-LP-27' },
+  { id: 'cmd-hb-lp-28',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '28', zona: 'Lapangan Padel',     titik: 'Lap Padel II',                      qrCode: 'CMD-HB-LP-28' },
+  { id: 'cmd-hb-ap-29',  gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Belakang',  nomorTitik: '29', zona: 'Area Padel',         titik: 'Pintu Padel',                       qrCode: 'CMD-HB-AP-29' },
+  { id: 'cmd-hskr-b-30', gedung: 'CMMDIGITAL - Gedung Pusat', lantai: 'Halaman Samping Kiri', nomorTitik: '30', zona: 'B',              titik: 'Kopi Tuku',                         qrCode: 'CMD-HSKR-B-30' },
 ];
 
 const cleanAndDeduplicateAreas = (rawList) => {
@@ -156,7 +156,7 @@ const cleanAndDeduplicateAreas = (rawList) => {
     const num = String(initArea.nomorTitik).trim();
     const rawMatch = rawList.find(r =>
       (r.qrCode && r.qrCode.toUpperCase().trim() === qr) ||
-      (r.id === initArea.id || r.id === initArea.id.replace(/^jdc-/, '')) ||
+      (r.id === initArea.id || r.id === initArea.id.replace(/^cmd-/, '')) ||
       (String(r.nomorTitik).trim() === num && r.lantai === initArea.lantai)
     );
     if (rawMatch) {
@@ -667,7 +667,7 @@ export default function App() {
       const valid = verifyUserDataSignature(users);
       if (!valid) {
         console.warn('[Security] Data user telah dimanipulasi! Menghapus session.');
-        localStorage.removeItem('smpjdc_session');
+        localStorage.removeItem('cmdigital_session');
         localStorage.removeItem('sapujagat_users_sig');
         setHasUsers(false);
         setAuthenticated(false);
@@ -676,7 +676,7 @@ export default function App() {
     }
     setHasUsers(hasExistingUsers);
 
-    const sessionStr = localStorage.getItem('smpjdc_session');
+    const sessionStr = localStorage.getItem('cmdigital_session');
     if (sessionStr) {
       try {
         const session = JSON.parse(sessionStr);
@@ -687,7 +687,7 @@ export default function App() {
             // Anti-tamper: verifikasi role dalam session
             if (session.roleToken && !verifyRoleInSession(found.id, found.jabatan, session.roleToken)) {
               console.warn('[Security] Role user telah dimanipulasi! Logout paksa.');
-              localStorage.removeItem('smpjdc_session');
+              localStorage.removeItem('cmdigital_session');
               setAuthenticated(false);
               return;
             }
@@ -706,18 +706,18 @@ export default function App() {
             
             // Restore last active route from hash or last_route, default to guard/dashboard
             const hash = window.location.hash.replace('#/', '').replace('#', '');
-            const lastRoute = localStorage.getItem('smpjdc_last_route');
+            const lastRoute = localStorage.getItem('cmdigital_last_route');
             const defaultTab = ['Danru', 'Wadanru', 'Anggota'].includes(found.jabatan) ? 'guard-simulator' : 'dashboard';
             const initialTab = hash || lastRoute || defaultTab;
             
             setCurrentTab(initialTab);
             window.location.hash = '#/' + initialTab;
-            localStorage.setItem('smpjdc_last_route', initialTab);
+            localStorage.setItem('cmdigital_last_route', initialTab);
             return;
           }
         }
       } catch (e) {
-        localStorage.removeItem('smpjdc_session');
+        localStorage.removeItem('cmdigital_session');
       }
     }
     setAuthenticated(false);
@@ -739,7 +739,7 @@ export default function App() {
         ];
         if (validTabs.includes(hash)) {
           setCurrentTab(hash);
-          localStorage.setItem('smpjdc_last_route', hash);
+          localStorage.setItem('cmdigital_last_route', hash);
         }
       }
     };
@@ -828,7 +828,7 @@ export default function App() {
   useEffect(() => {
     if (!showSplash) return;
     const allLogs = [
-      '>> INITIALIZING SMPJDC SECURITY SYSTEM...',
+      '>> INITIALIZING CMMDIGITAL SECURITY SYSTEM...',
       '>> LOAD SYSTEM DRIVER: anti_fraud_gps.sys ... OK',
       '>> CONNECTING CENTRAL DATABASE DIRECTORY...',
       '>> VERIFYING ACCESS PRIVILEGES... BY_RICHARDMEHA',
@@ -881,7 +881,7 @@ export default function App() {
     };
   }, [showSplash]);
 
-  const [theme, setTheme] = useState(() => localStorage.getItem('smpjdc_theme') || 'dark');
+  const [theme, setTheme] = useState(() => localStorage.getItem('cmdigital_theme') || 'dark');
 
   useEffect(() => {
     // Add theme class globally to html element (document.documentElement)
@@ -893,7 +893,7 @@ export default function App() {
   const toggleTheme = () => {
     setTheme(prev => {
       const next = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem('smpjdc_theme', next);
+      localStorage.setItem('cmdigital_theme', next);
       return next;
     });
   };
@@ -930,14 +930,14 @@ export default function App() {
         // ✅ Ada data real di localStorage — pakai sepenuhnya, abaikan BASE_USERS
         // Hanya normalize PIN
         parsed.forEach(u => {
-          const stored = localStorage.getItem(`smpjdc_pin_${u.id}`);
+          const stored = localStorage.getItem(`cmdigital_pin_${u.id}`);
           if (stored && !stored.startsWith('h')) {
-            localStorage.setItem(`smpjdc_pin_${u.id}`, hashPin(stored));
+            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(stored));
           }
           delete u.pin;
           // Auto-init PIN jika belum ada (default = NRP)
-          if (!localStorage.getItem(`smpjdc_pin_${u.id}`)) {
-            localStorage.setItem(`smpjdc_pin_${u.id}`, hashPin(u.nrp || String(u.id)));
+          if (!localStorage.getItem(`cmdigital_pin_${u.id}`)) {
+            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(u.nrp || String(u.id)));
           }
         });
         // Pastikan superadmin ada (jangan sampai terkunci)
@@ -945,8 +945,8 @@ export default function App() {
         if (!hasSuperAdmin) {
           BASE_USERS.forEach(bu => {
             parsed.unshift(bu);
-            if (!localStorage.getItem(`smpjdc_pin_${bu.id}`)) {
-              localStorage.setItem(`smpjdc_pin_${bu.id}`, hashPin(bu.nrp));
+            if (!localStorage.getItem(`cmdigital_pin_${bu.id}`)) {
+              localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
             }
           });
         }
@@ -957,8 +957,8 @@ export default function App() {
 
       // ❌ localStorage kosong — gunakan BASE_USERS sebagai seed minimal
       BASE_USERS.forEach(bu => {
-        if (!localStorage.getItem(`smpjdc_pin_${bu.id}`)) {
-          localStorage.setItem(`smpjdc_pin_${bu.id}`, hashPin(bu.nrp));
+        if (!localStorage.getItem(`cmdigital_pin_${bu.id}`)) {
+          localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
         }
       });
       localStorage.setItem('sapujagat_users', JSON.stringify(BASE_USERS));
@@ -985,12 +985,12 @@ export default function App() {
 
   const [posList, setPosList] = useState(() => {
     try {
-      const saved = localStorage.getItem('smpjdc_pos_list');
+      const saved = localStorage.getItem('cmdigital_pos_list');
       const parsed = saved ? JSON.parse(saved) : null;
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
       }
-      localStorage.setItem('smpjdc_pos_list', JSON.stringify(INITIAL_POS_LIST));
+      localStorage.setItem('cmdigital_pos_list', JSON.stringify(INITIAL_POS_LIST));
       return INITIAL_POS_LIST;
     } catch (e) {
       return INITIAL_POS_LIST;
@@ -1036,7 +1036,7 @@ export default function App() {
 
   const [mutasiLogs, setMutasiLogs] = useState(() => {
     try {
-      const saved = localStorage.getItem('smpjdc_mutasi_logs');
+      const saved = localStorage.getItem('cmdigital_mutasi_logs');
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
@@ -1044,7 +1044,7 @@ export default function App() {
 
   const [attendanceLogs, setAttendanceLogs] = useState(() => {
     try {
-      const saved = localStorage.getItem('smpjdc_attendance_logs');
+      const saved = localStorage.getItem('cmdigital_attendance_logs');
       const parsed = saved ? JSON.parse(saved) : null;
       return Array.isArray(parsed) ? parsed : [];
     } catch { return []; }
@@ -1052,7 +1052,7 @@ export default function App() {
 
   const [complaints, setComplaints] = useState(() => {
     try {
-      const saved = localStorage.getItem('smpjdc_complaints');
+      const saved = localStorage.getItem('cmdigital_complaints');
       return saved ? JSON.parse(saved) : [];
     } catch { return []; }
   });
@@ -1061,7 +1061,7 @@ export default function App() {
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
 
   const checkOfflineQueue = () => {
-    const keys = ['smpjdc_complaints', 'sapujagat_reports', 'sapujagat_findings', 'sapujagat_found_items', 'smpjdc_attendance_logs', 'smpjdc_mutasi_logs'];
+    const keys = ['cmdigital_complaints', 'sapujagat_reports', 'sapujagat_findings', 'sapujagat_found_items', 'cmdigital_attendance_logs', 'cmdigital_mutasi_logs'];
     let total = 0;
     for (const key of keys) {
       try {
@@ -1095,11 +1095,11 @@ export default function App() {
       // Auto-initialize PINs for all users synced from Firebase/local who don't have one in localStorage
       if (Array.isArray(users)) {
         users.forEach(u => {
-          const stored = localStorage.getItem(`smpjdc_pin_${u.id}`);
+          const stored = localStorage.getItem(`cmdigital_pin_${u.id}`);
           if (!stored) {
-            localStorage.setItem(`smpjdc_pin_${u.id}`, hashPin(u.nrp));
+            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(u.nrp));
           } else if (stored && !stored.startsWith('h')) {
-            localStorage.setItem(`smpjdc_pin_${u.id}`, hashPin(stored));
+            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(stored));
           }
         });
       }
@@ -1182,7 +1182,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('smpjdc_pos_list', JSON.stringify(posList));
+      localStorage.setItem('cmdigital_pos_list', JSON.stringify(posList));
     } catch (e) {
       console.error('Failed to save pos list to localStorage', e);
     }
@@ -1191,12 +1191,12 @@ export default function App() {
   useEffect(() => { persistState('sapujagat_reports', reports); }, [reports]);
   useEffect(() => { persistState('sapujagat_findings', findings); }, [findings]);
   useEffect(() => { persistState('sapujagat_found_items', foundItems); }, [foundItems]);
-  useEffect(() => { persistState('smpjdc_mutasi_logs', mutasiLogs); }, [mutasiLogs]);
-  useEffect(() => { persistState('smpjdc_attendance_logs', attendanceLogs); }, [attendanceLogs]);
+  useEffect(() => { persistState('cmdigital_mutasi_logs', mutasiLogs); }, [mutasiLogs]);
+  useEffect(() => { persistState('cmdigital_attendance_logs', attendanceLogs); }, [attendanceLogs]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('smpjdc_complaints', JSON.stringify(complaints));
+      localStorage.setItem('cmdigital_complaints', JSON.stringify(complaints));
     } catch (e) {
       console.warn('[Complaint] Gagal sync ke localStorage:', e);
     }
@@ -1215,7 +1215,7 @@ export default function App() {
           const exists = merged.find(m => m.id === local.id || (m.firebaseId && m.firebaseId === local.firebaseId));
           if (!exists && merged.length < 500) merged.push(local);
         });
-        try { localStorage.setItem('smpjdc_complaints', JSON.stringify(merged)); } catch (e) {}
+        try { localStorage.setItem('cmdigital_complaints', JSON.stringify(merged)); } catch (e) {}
         return merged;
       });
     }, { limit: 500 });
@@ -1291,7 +1291,7 @@ export default function App() {
           const exists = merged.find(m => m.id === local.id || (m.firebaseId && m.firebaseId === local.firebaseId));
           if (!exists && merged.length < 500) merged.push(local);
         });
-        try { localStorage.setItem('smpjdc_attendance_logs', JSON.stringify(merged)); } catch (e) {}
+        try { localStorage.setItem('cmdigital_attendance_logs', JSON.stringify(merged)); } catch (e) {}
         return merged;
       });
     }, { limit: 500 });
@@ -1310,7 +1310,7 @@ export default function App() {
           const exists = merged.find(m => m.id === local.id || (m.firebaseId && m.firebaseId === local.firebaseId));
           if (!exists && merged.length < 500) merged.push(local);
         });
-        try { localStorage.setItem('smpjdc_mutasi_logs', JSON.stringify(merged)); } catch (e) {}
+        try { localStorage.setItem('cmdigital_mutasi_logs', JSON.stringify(merged)); } catch (e) {}
         return merged;
       });
     }, { limit: 500 });
@@ -1495,7 +1495,7 @@ export default function App() {
     const unsub = subscribeWAContacts((firebaseData) => {
       if (!firebaseData) return;
       const { updatedAt, ...contacts } = firebaseData;
-      localStorage.setItem('smpjdc_wa_contacts', JSON.stringify(contacts));
+      localStorage.setItem('cmdigital_wa_contacts', JSON.stringify(contacts));
     });
     return () => unsub();
   }, []);
@@ -1536,12 +1536,12 @@ export default function App() {
     let cancelled = false;
 
     const SYNC_COLLECTIONS = [
-      { key: 'smpjdc_complaints', adder: addComplaintToFirestore },
+      { key: 'cmdigital_complaints', adder: addComplaintToFirestore },
       { key: 'sapujagat_reports', adder: addReportToFirestore },
       { key: 'sapujagat_findings', adder: addFindingToFirestore },
       { key: 'sapujagat_found_items', adder: addFoundItemToFirestore },
-      { key: 'smpjdc_attendance_logs', adder: addAttendanceLogToFirestore },
-      { key: 'smpjdc_mutasi_logs', adder: addMutasiLogToFirestore },
+      { key: 'cmdigital_attendance_logs', adder: addAttendanceLogToFirestore },
+      { key: 'cmdigital_mutasi_logs', adder: addMutasiLogToFirestore },
     ];
 
     const syncAll = async () => {
@@ -1586,12 +1586,12 @@ export default function App() {
                 ));
               };
 
-              if (key === 'smpjdc_complaints') updater(setComplaints, 'supabaseId');
+              if (key === 'cmdigital_complaints') updater(setComplaints, 'supabaseId');
               else if (key === 'sapujagat_reports') updater(setReports, 'supabaseId');
               else if (key === 'sapujagat_findings') updater(setFindings, 'supabaseId');
               else if (key === 'sapujagat_found_items') updater(setFoundItems, 'supabaseId');
-              else if (key === 'smpjdc_attendance_logs') updater(setAttendanceLogs, 'supabaseId');
-              else if (key === 'smpjdc_mutasi_logs') updater(setMutasiLogs, 'supabaseId');
+              else if (key === 'cmdigital_attendance_logs') updater(setAttendanceLogs, 'supabaseId');
+              else if (key === 'cmdigital_mutasi_logs') updater(setMutasiLogs, 'supabaseId');
 
               try {
                 const current = JSON.parse(localStorage.getItem(key) || '[]');
@@ -1793,7 +1793,7 @@ export default function App() {
         reportId,
         tenant_id: tenantId,
         kategori: newReport.kondisi,
-        area: `${newReport.gedung || 'JDC'} Lt.${newReport.lantai} ${newReport.zona} - ${newReport.titik}`,
+        area: `${newReport.gedung || 'CMD'} Lt.${newReport.lantai} ${newReport.zona} - ${newReport.titik}`,
         tanggal: timestamp,
         pelapor: currentUser?.nama,
         nrp: currentUser?.nrp,
@@ -2211,7 +2211,7 @@ export default function App() {
           if (fid) await deleteAttendanceLogFromFirestore(fid);
           setAttendanceLogs(prev => {
             const filtered = prev.filter(l => l.id !== id);
-            try { localStorage.setItem('smpjdc_attendance_logs', JSON.stringify(filtered)); } catch (e) {}
+            try { localStorage.setItem('cmdigital_attendance_logs', JSON.stringify(filtered)); } catch (e) {}
             return filtered;
           });
           addToast('Absensi berhasil dihapus!', 'success');
@@ -2228,7 +2228,7 @@ export default function App() {
     let complaintData = { ...complaint, tenant_id: tenantId };
     setComplaints(prev => {
       const updated = [complaintData, ...prev];
-      try { localStorage.setItem('smpjdc_complaints', JSON.stringify(updated)); } catch (e) {}
+      try { localStorage.setItem('cmdigital_complaints', JSON.stringify(updated)); } catch (e) {}
       return updated;
     });
     addToast(`Komplain ${complaint.ticketId} berhasil dikirim!`, 'success');
@@ -2265,7 +2265,7 @@ export default function App() {
     const target = complaints.find(c => c.id === id);
     setComplaints(prev => {
       const updated = prev.map(c => c.id === id ? { ...c, ...updates } : c);
-      try { localStorage.setItem('smpjdc_complaints', JSON.stringify(updated)); } catch (e) {}
+      try { localStorage.setItem('cmdigital_complaints', JSON.stringify(updated)); } catch (e) {}
       return updated;
     });
     if (updates.status === 'Selesai') {
@@ -2301,7 +2301,7 @@ export default function App() {
           if (fid) await deleteComplaintFromFirestore(fid);
           setComplaints(prev => {
             const filtered = prev.filter(c => c.id !== id);
-            try { localStorage.setItem('smpjdc_complaints', JSON.stringify(filtered)); } catch (e) {}
+            try { localStorage.setItem('cmdigital_complaints', JSON.stringify(filtered)); } catch (e) {}
             return filtered;
           });
           addToast('Komplain berhasil dihapus!', 'success');
@@ -2432,7 +2432,7 @@ export default function App() {
       }
     }).catch(e => addToast(`Gagal sync user baru ke Cloud: ${e.message}`, 'warning'));
     if (newUser.pin) {
-      localStorage.setItem(`smpjdc_pin_${userId}`, hashPin(newUser.pin));
+      localStorage.setItem(`cmdigital_pin_${userId}`, hashPin(newUser.pin));
     }
     addToast(`Anggota baru ${newUser.nama} (${newUser.jabatan}) berhasil didaftarkan!`, 'success');
   };
@@ -2494,7 +2494,7 @@ export default function App() {
       localStorage.setItem('sapujagat_users', JSON.stringify(BASE_USERS));
       signUserData(BASE_USERS);
       BASE_USERS.forEach(bu => {
-        localStorage.setItem(`smpjdc_pin_${bu.id}`, hashPin(bu.nrp));
+        localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
       });
     } else {
       addToast('Gagal mereset database user di Firestore. Periksa koneksi internet.', 'danger');
@@ -2513,9 +2513,9 @@ export default function App() {
       setComplaints([]);
       localStorage.setItem('sapujagat_reports', JSON.stringify([]));
       localStorage.setItem('sapujagat_findings', JSON.stringify([]));
-      localStorage.setItem('smpjdc_mutasi_logs', JSON.stringify([]));
-      localStorage.setItem('smpjdc_attendance_logs', JSON.stringify([]));
-      localStorage.setItem('smpjdc_complaints', JSON.stringify([]));
+      localStorage.setItem('cmdigital_mutasi_logs', JSON.stringify([]));
+      localStorage.setItem('cmdigital_attendance_logs', JSON.stringify([]));
+      localStorage.setItem('cmdigital_complaints', JSON.stringify([]));
     } else {
       addToast('Gagal membersihkan data di Firestore. Periksa koneksi internet.', 'danger');
     }
@@ -2577,7 +2577,7 @@ export default function App() {
       return;
     }
     
-    const storedPinHash = localStorage.getItem(`smpjdc_pin_${currentUser.id}`);
+    const storedPinHash = localStorage.getItem(`cmdigital_pin_${currentUser.id}`);
     
     if (storedPinHash && !verifyPin(currentPin, storedPinHash)) {
       setProfileError('PIN saat ini salah.');
@@ -2596,7 +2596,7 @@ export default function App() {
     
     try {
       const hashed = hashPin(newPin);
-      localStorage.setItem(`smpjdc_pin_${currentUser.id}`, hashed);
+      localStorage.setItem(`cmdigital_pin_${currentUser.id}`, hashed);
       
       setProfileSuccess('PIN berhasil diperbarui!');
       setCurrentPin('');
@@ -2626,7 +2626,7 @@ export default function App() {
     const targetTab = ['Danru', 'Wadanru', 'Anggota'].includes(user.jabatan) ? 'guard-simulator' : 'dashboard';
     setCurrentTab(targetTab);
     window.location.hash = '#/' + targetTab;
-    localStorage.setItem('smpjdc_last_route', targetTab);
+    localStorage.setItem('cmdigital_last_route', targetTab);
   };
 
   const handleSetup = (user) => {
@@ -2636,13 +2636,13 @@ export default function App() {
     setHasUsers(true);
     setCurrentTab('dashboard');
     window.location.hash = '#/dashboard';
-    localStorage.setItem('smpjdc_last_route', 'dashboard');
+    localStorage.setItem('cmdigital_last_route', 'dashboard');
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('smpjdc_session');
-    localStorage.removeItem('smpjdc_last_route');
-    localStorage.removeItem('smpjdc_active_tenant');
+    localStorage.removeItem('cmdigital_session');
+    localStorage.removeItem('cmdigital_last_route');
+    localStorage.removeItem('cmdigital_active_tenant');
     window.location.hash = '#/login';
     setAuthenticated(false);
     setCurrentUser(null);
@@ -2656,13 +2656,13 @@ export default function App() {
     if (tabName === 'absensi' && currentUser?.jabatan === 'Anggota') {
       setCurrentTab('guard-simulator');
       window.location.hash = '#/guard-simulator';
-      localStorage.setItem('smpjdc_last_route', 'guard-simulator');
-      localStorage.setItem('smpjdc_simulator_tab', 'presensi');
-      window.dispatchEvent(new Event('smpjdc_simulator_tab_change'));
+      localStorage.setItem('cmdigital_last_route', 'guard-simulator');
+      localStorage.setItem('cmdigital_simulator_tab', 'presensi');
+      window.dispatchEvent(new Event('cmdigital_simulator_tab_change'));
     } else {
       setCurrentTab(tabName);
       window.location.hash = '#/' + tabName;
-      localStorage.setItem('smpjdc_last_route', tabName);
+      localStorage.setItem('cmdigital_last_route', tabName);
     }
     setIsSidebarOpen(false);
   };
@@ -2761,7 +2761,7 @@ export default function App() {
           <div className="hud-ring ring-inner"></div>
           <div className="hud-ring ring-dashed"></div>
           <div className="splash-logo-container">
-            <img src="logo.png" alt="SMPJDC" className="splash-logo cyber-logo logo-3d-spin" />
+            <img src="logo.png" alt="CMMDIGITAL" className="splash-logo cyber-logo logo-3d-spin" />
           </div>
         </div>
         <div className="cyber-progress-container">
@@ -2775,7 +2775,7 @@ export default function App() {
         </div>
         <div className="cyber-console">
           <div className="console-header">
-            <span className="console-title">[SMPJDC SECURE BOOT]</span>
+            <span className="console-title">[CMMDIGITAL SECURE BOOT]</span>
             <span className="console-status blink">VERIFYING AUTHENTICATION</span>
           </div>
           <div className="console-body">
@@ -2794,7 +2794,7 @@ export default function App() {
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.8, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
           </div>
           <span style={{ fontSize: '0.62rem', color: '#c7d2fe', letterSpacing: '0.12em', marginTop: '0.2rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
-            ★ JDC SECURITY CORE ARCHITECT ★
+            ★ CMMDIGITAL CORE ARCHITECT ★
           </span>
         </div>
       </div>
@@ -2832,7 +2832,7 @@ export default function App() {
           <div className="hud-ring ring-inner"></div>
           <div className="hud-ring ring-dashed"></div>
           <div className="splash-logo-container">
-            <img src="logo.png" alt="SMPJDC" className="splash-logo cyber-logo logo-3d-spin" />
+            <img src="logo.png" alt="CMMDIGITAL" className="splash-logo cyber-logo logo-3d-spin" />
           </div>
         </div>
         <div className="cyber-progress-container">
@@ -2846,7 +2846,7 @@ export default function App() {
         </div>
         <div className="cyber-console">
           <div className="console-header">
-            <span className="console-title">[SMPJDC SECURE BOOT]</span>
+            <span className="console-title">[CMMDIGITAL SECURE BOOT]</span>
             <span className="console-status blink">{statusText}</span>
           </div>
           <div className="console-body">
@@ -2864,7 +2864,7 @@ export default function App() {
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.8, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
           </div>
           <span style={{ fontSize: '0.62rem', color: '#c7d2fe', letterSpacing: '0.12em', marginTop: '0.2rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
-            ★ JDC SECURITY CORE ARCHITECT ★
+            ★ CMMDIGITAL CORE ARCHITECT ★
           </span>
         </div>
       </div>
@@ -2880,11 +2880,11 @@ export default function App() {
       <aside className={`sidebar ${isSidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-brand">
           <div className="sidebar-logo-box">
-            <img src="logo.png" alt="SMPJDC" className="logo-3d" />
+            <img src="logo.png" alt="CMMDIGITAL" className="logo-3d" />
           </div>
           <div className="sidebar-brand-text">
-            <h2>SMPJDC<span className="text-primary"> JDC</span></h2>
-            <p>SISTEM MANAGEMENT KEAMANAN JDC</p>
+            <h2>CMMDIGITAL<span className="text-primary"> Multi-Tenant</span></h2>
+            <p>SISTEM MANAGEMENT MULTI-TENANT</p>
           </div>
           <button
             type="button"
@@ -2937,11 +2937,9 @@ export default function App() {
               <button onClick={() => handleNavClick('backup')} className={`nav-tab-btn ${currentTab === 'backup' ? 'active' : ''}`}>
                 <Database size={18} /> <span>Backup & Restore</span>
               </button>
-              {isSuperAdmin && (
-                <button onClick={() => handleNavClick('tenant-management')} className={`nav-tab-btn ${currentTab === 'tenant-management' ? 'active' : ''}`}>
-                  <Building2 size={18} /> <span>Manajemen Tenant</span>
-                </button>
-              )}
+              <button onClick={() => handleNavClick('tenant-management')} className={`nav-tab-btn ${currentTab === 'tenant-management' ? 'active' : ''}`}>
+                <Building2 size={18} /> <span>Manajemen Tenant</span>
+              </button>
               <button onClick={() => handleNavClick('complaint')} className={`nav-tab-btn ${currentTab === 'complaint' ? 'active' : ''}`}>
                 <MessageSquare size={18} /> <span>Komplain Masuk</span>
               </button>
@@ -2994,7 +2992,7 @@ export default function App() {
           {/* GUEST VIEWER */}
           {isClient && (
             <button onClick={() => handleNavClick('target-compliance')} className={`nav-tab-btn ${currentTab === 'target-compliance' ? 'active' : ''}`}>
-              <Target size={18} /> <span>Dashboard Target SMPJDC</span>
+              <Target size={18} /> <span>Dashboard Target CMMDIGITAL</span>
             </button>
           )}
 
@@ -3030,7 +3028,7 @@ export default function App() {
         <div className="sidebar-footer">
           <div className="sidebar-footer-info">
             <Building size={14} />
-            <span>SMPJDC - Jakarta Design Center</span>
+            <span>CMMDIGITAL - Gedung Pusat</span>
           </div>
           <button onClick={toggleTheme} className="theme-toggle-btn" title={`Mode ${theme === 'dark' ? 'Terang' : 'Gelap'}`}>
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
@@ -3041,7 +3039,7 @@ export default function App() {
             <span>Keluar</span>
           </button>
           <div className="sidebar-footer-copy" style={{ opacity: 0.9, padding: '0 0.5rem' }}>
-            <div style={{ fontSize: '0.65rem', marginBottom: '0.2rem', opacity: 0.6 }}>© 2026 SMPJDC. Hak Cipta Dilindungi.</div>
+            <div style={{ fontSize: '0.65rem', marginBottom: '0.2rem', opacity: 0.6 }}>© 2026 CMMDIGITAL. Hak Cipta Dilindungi.</div>
             <OrnamentalWatermark />
           </div>
         </div>
@@ -3056,10 +3054,10 @@ export default function App() {
                 {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </button>
               <div className="header-logo-box">
-                <img src="logo.png" alt="SMPJDC" className="logo-3d" />
+                <img src="logo.png" alt="CMMDIGITAL" className="logo-3d" />
               </div>
               <div className="header-brand-text">
-                <span className="header-brand-name">SMPJDC</span>
+                <span className="header-brand-name">CMMDIGITAL</span>
                 <h1 className="header-page-title">
                   {currentTab === 'dashboard' && 'Dashboard Manajemen Keamanan'}
                   {currentTab === 'absensi' && 'Absensi & Plotting Penjagaan'}
@@ -3258,8 +3256,18 @@ export default function App() {
             </div>
           )}
 
-          {currentTab === 'tenant-management' && isSuperAdmin && (
-            <TenantManagement currentUser={currentUser} isGodMode={isGodMode} isAdmin={isAdmin} addToast={addToast} />
+          {currentTab === 'tenant-management' && (
+            <div style={{ padding: '1.5rem' }}>
+              {isSuperAdmin ? (
+                <TenantManagement currentUser={currentUser} isGodMode={isGodMode} isAdmin={isAdmin} addToast={addToast} />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#ef4444' }}>
+                  <Shield size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <h2 style={{ color: '#f8fafc', marginBottom: '0.5rem' }}>Akses Ditolak</h2>
+                  <p style={{ color: '#94a3b8' }}>Hanya Admin Super yang dapat mengelola tenant.</p>
+                </div>
+              )}
+            </div>
           )}
 
           {currentTab === 'lapor' && isPatrol && (
@@ -3289,7 +3297,7 @@ export default function App() {
 
           <footer className={`app-footer ${currentTab === 'guard-simulator' ? 'hide-on-simulator-mobile' : ''}`}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', width: '100%' }}>
-              <span>© 2026 <strong className="text-primary">SMPJDC</strong>. Hak Cipta Dilindungi.</span>
+              <span>© 2026 <strong className="text-primary">CMMDIGITAL</strong>. Hak Cipta Dilindungi.</span>
               <OrnamentalWatermark />
             </div>
           </footer>
@@ -3338,7 +3346,7 @@ export default function App() {
             </div>
             <h2 style={{ color: 'var(--text-primary)', fontSize: '1.25rem', marginBottom: '0.5rem', fontWeight: 800 }}>Keluar dari Aplikasi?</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-              Apakah Anda yakin ingin menutup aplikasi patroli SMPJDC?
+              Apakah Anda yakin ingin menutup aplikasi patroli CMMDIGITAL?
             </p>
             <div style={{ display: 'flex', gap: '0.75rem' }}>
               <button onClick={handleExitApp} className="btn-danger" style={{ flex: 1, padding: '0.65rem', fontSize: '0.85rem', fontWeight: 700 }}>

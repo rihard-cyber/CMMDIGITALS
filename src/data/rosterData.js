@@ -1,13 +1,13 @@
 // ─── Roster Data Engine ─────────────────────────────────────────────────────
 // Menyimpan jadwal bulanan individu (bukan per regu).
-// Format key localStorage: smpjdc_roster_YYYY-MM
+// Format key localStorage: cmdigital_roster_YYYY-MM
 // Format data: { [userId]: { [date: 'YYYY-MM-DD']: shiftCode } }
 //
 // Cloud sync: otomatis sync ke Firebase Firestore (collection 'rosters')
 // saat user menyimpan, dan fallback baca dari cloud saat init.
 import { saveRosterToFirestore, loadRosterFromFirestore } from '../utils/supabase';
 
-const LS_KEY_PREFIX = 'smpjdc_roster_';
+const LS_KEY_PREFIX = 'cmdigital_roster_';
 
 // ── Definisi semua kode shift yang valid ──────────────────────────────────────
 export const SHIFT_CODES = {

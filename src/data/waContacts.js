@@ -2,7 +2,7 @@
 // Nomor telepon disimpan di localStorage agar bisa diubah oleh Admin tanpa
 // perlu rebuild aplikasi. Format nomor: kode negara tanpa + (cth: 6281234567890)
 
-const LS_KEY = 'smpjdc_wa_contacts';
+const LS_KEY = 'cmdigital_wa_contacts';
 
 export const WA_DEFAULTS = {
   Teknisi: {
@@ -57,7 +57,7 @@ export function buildWAMessage(finding, dept, contacts) {
   const c = (contacts || getWAContacts())[dept] || WA_DEFAULTS.Keamanan;
   const now = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
   return (
-    `*📋 LAPORAN TEMUAN - SMPJDC*\n` +
+    `*📋 LAPORAN TEMUAN - CMMDIGITAL*\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
     `${c.emoji} *Disposisi ke: ${c.nama}*\n\n` +
     `🆔 *ID Tiket:* \`${finding.id}\`\n` +
@@ -69,7 +69,7 @@ export function buildWAMessage(finding, dept, contacts) {
     `📝 *Keterangan:*\n"${finding.detail}"\n\n` +
     `⚡ *Mohon segera ditindaklanjuti!*\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-    `_Sistem Manajemen Keamanan JDC_\n` +
+    `_Sistem Manajemen Multi-Tenant CMMDIGITAL_\n` +
     `_Dikirim: ${now}_`
   );
 }
@@ -90,7 +90,7 @@ export function buildWARekap(openItems, dept, contacts) {
   const c = (contacts || getWAContacts())[dept] || WA_DEFAULTS.Keamanan;
   const now = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' });
   return (
-    `*${c.emoji} REKAP TIKET OPEN - SMPJDC*\n` +
+    `*${c.emoji} REKAP TIKET OPEN - CMMDIGITAL*\n` +
     `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
     `Yth. ${c.nama},\n\n` +
     `Berikut tiket aktif yang perlu ditindaklanjuti:\n\n` +
@@ -99,7 +99,7 @@ export function buildWARekap(openItems, dept, contacts) {
     ).join('\n') +
     `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
     `Total: *${openItems.length} tiket aktif*\n` +
-    `_Sistem Manajemen Keamanan JDC_\n` +
+    `_Sistem Manajemen Multi-Tenant CMMDIGITAL_\n` +
     `_Dikirim: ${now}_`
   );
 }

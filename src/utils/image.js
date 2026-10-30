@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Image Compressor Utility
  *   Signed by: Richard Meha (by -Richard)
  *   Last Maintained: 2026-06-07

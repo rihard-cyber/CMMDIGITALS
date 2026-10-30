@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Tenant Complaint Form (Form Komplain)
  *   Signed by: Richard Meha (by -Richard)
  *   Last Maintained: 2026-06-07
@@ -164,7 +164,7 @@ export default function ComplaintForm({ onAddComplaint }) {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
 
-    const count = JSON.parse(localStorage.getItem('smpjdc_complaints') || '[]').length + 1;
+    const count = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]').length + 1;
     const id = `CMP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(count).padStart(3, '0')}`;
     const finalCategory = category === 'Lainnya' && categoryCustom.trim() ? categoryCustom.trim() : category;
     const complaint = {
@@ -188,9 +188,9 @@ export default function ComplaintForm({ onAddComplaint }) {
     };
     // Simpan langsung ke localStorage sebagai jaring pengaman
     try {
-      const existing = JSON.parse(localStorage.getItem('smpjdc_complaints') || '[]');
+      const existing = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
       existing.unshift(complaint);
-      localStorage.setItem('smpjdc_complaints', JSON.stringify(existing));
+      localStorage.setItem('cmdigital_complaints', JSON.stringify(existing));
     } catch (e) {
       console.warn('[Form] Gagal simpan langsung:', e);
     }
@@ -202,7 +202,7 @@ export default function ComplaintForm({ onAddComplaint }) {
   const handleTrack = (e) => {
     e.preventDefault();
     if (!trackId.trim()) return;
-    const data = JSON.parse(localStorage.getItem('smpjdc_complaints') || '[]');
+    const data = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
     const found = data.find(c => c.ticketId === trackId.trim().toUpperCase() || c.name.toLowerCase().includes(trackId.trim().toLowerCase()));
     setTrackData(found || 'notfound');
   };
@@ -226,7 +226,7 @@ export default function ComplaintForm({ onAddComplaint }) {
           <div className="hud-ring ring-inner"></div>
           <div className="hud-ring ring-dashed"></div>
           <div className="splash-logo-container">
-            <img src="logo.png" alt="SMPJDC" className="splash-logo cyber-logo logo-3d-spin" />
+            <img src="logo.png" alt="CMMDIGITAL" className="splash-logo cyber-logo logo-3d-spin" />
           </div>
         </div>
         <div className="cyber-progress-container">
@@ -258,7 +258,7 @@ export default function ComplaintForm({ onAddComplaint }) {
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.8, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
           </div>
           <span style={{ fontSize: '0.62rem', color: '#c7d2fe', letterSpacing: '0.12em', marginTop: '0.2rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
-            ★ JDC SECURITY CORE ARCHITECT ★
+            ★ CMMDIGITAL CORE ARCHITECT ★
           </span>
         </div>
       </div>
@@ -414,9 +414,9 @@ export default function ComplaintForm({ onAddComplaint }) {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-            <img src="./logo.png" alt="SMPJDC" className="logo-3d" style={{ height: 32, width: 'auto' }} />
+            <img src="./logo.png" alt="CMMDIGITAL" className="logo-3d" style={{ height: 32, width: 'auto' }} />
             <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 800, lineHeight: 1.2 }}>SMPJDC</h2>
+              <h2 style={{ fontSize: '1rem', fontWeight: 800, lineHeight: 1.2 }}>CMMDIGITAL</h2>
               <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sistem Komplain Terpadu</p>
             </div>
           </div>
@@ -497,7 +497,7 @@ export default function ComplaintForm({ onAddComplaint }) {
           <div className="step-field">
             <label>{category === 'Kritik & Saran' ? 'ISI KRITIK & SARAN' : 'DESKRIPSI KOMPLAIN'} <span style={{ color: 'var(--color-danger)' }}>*</span></label>
             <textarea value={description} onChange={e => { setDescription(e.target.value); setErrors(p => ({ ...p, description: '' })); }}
-              placeholder={category === 'Kritik & Saran' ? 'Tuliskan kritik, masukan, atau saran Anda untuk peningkatan layanan gedung JDC...' : 'Jelaskan detail komplain atau kendala Anda...'} className="modern-input"
+              placeholder={category === 'Kritik & Saran' ? 'Tuliskan kritik, masukan, atau saran Anda untuk peningkatan layanan gedung CMMDIGITAL...' : 'Jelaskan detail komplain atau kendala Anda...'} className="modern-input"
               style={{ height: '90px', resize: 'vertical', fontSize: '0.82rem', padding: '0.5rem' }} />
             {errors.description && <span style={{ fontSize: '0.65rem', color: 'var(--color-danger)' }}>{errors.description}</span>}
           </div>
@@ -554,7 +554,7 @@ export default function ComplaintForm({ onAddComplaint }) {
 
         <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', width: '100%', opacity: 0.9, position: 'relative', zIndex: 1 }}>
           <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0, color: 'var(--text-muted)', fontSize: '0.65rem' }}>
-            SMPJDC &mdash; SISTEM MANAGEMENT KEAMANAN JDC &copy; 2026
+            CMMDIGITAL &mdash; SISTEM MANAGEMENT MULTI-TENANT &copy; 2026
           </p>
           <div className="ornamental-watermark" style={{ margin: '0.2rem auto 0', width: '100%', maxWidth: '380px' }}>
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>

@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Security Patrol Mobile App (Simulation)
  *   Signed by: Richard Meha (by -Richard)
  *   Last Maintained: 2026-06-07
@@ -95,7 +95,7 @@ export default function SecurityPatrolApp({
   const [clockOutTime, setClockOutTime] = useState('');
   const [showPlottingModal, setShowPlottingModal] = useState(false);
   const [lastPlottingId, setLastPlottingId] = useState(() => {
-    return localStorage.getItem('smpjdc_last_plotting_id') || '';
+    return localStorage.getItem('cmdigital_last_plotting_id') || '';
   });
 
   const getDetectedShiftCode = () => {
@@ -359,15 +359,15 @@ export default function SecurityPatrolApp({
 
   useEffect(() => {
     const handleTabChange = () => {
-      const savedTab = localStorage.getItem('smpjdc_simulator_tab');
+      const savedTab = localStorage.getItem('cmdigital_simulator_tab');
       if (savedTab) {
         setTab(savedTab);
-        localStorage.removeItem('smpjdc_simulator_tab');
+        localStorage.removeItem('cmdigital_simulator_tab');
       }
     };
-    window.addEventListener('smpjdc_simulator_tab_change', handleTabChange);
+    window.addEventListener('cmdigital_simulator_tab_change', handleTabChange);
     handleTabChange();
-    return () => window.removeEventListener('smpjdc_simulator_tab_change', handleTabChange);
+    return () => window.removeEventListener('cmdigital_simulator_tab_change', handleTabChange);
   }, []);
 
   // ── States & Handlers for Self Attendance (SI PRESENSI PRO MAX) ──
@@ -794,7 +794,7 @@ export default function SecurityPatrolApp({
       }
     }
 
-    if (cleanVal === 'JDC-MASTER-PRESENSI') {
+    if (cleanVal === 'CMD-MASTER-PRESENSI') {
       playBeepSound();
       setScanningPresensi(false);
       setPresensiScanError('');
@@ -883,7 +883,7 @@ export default function SecurityPatrolApp({
       }
     }
 
-    // 7. JDC Area Radius Check (500 meters from JDC Center - Slipi Gatot Subroto Kav 53)
+    // 7. CMD Area Radius Check (500 meters from CMD Center - Slipi Gatot Subroto Kav 53)
     const jdcLat = -6.2088;
     const jdcLng = 106.8021;
     const R = 6371e3; // Earth radius in meters
@@ -899,7 +899,7 @@ export default function SecurityPatrolApp({
     const distance = R * c;
 
     if (distance > 500 && !isTestAccount) {
-      alert(`⚠️ DI LUAR RADIUS: Jarak Anda ${Math.round(distance)}m dari JDC. Jarak maksimal absensi adalah 500m dari gedung JDC!`);
+      alert(`⚠️ DI LUAR RADIUS: Jarak Anda ${Math.round(distance)}m dari CMD. Jarak maksimal absensi adalah 500m dari gedung CMD!`);
       return;
     }
 
@@ -1058,10 +1058,10 @@ export default function SecurityPatrolApp({
         }
       }
       setLastPlottingId(currentPlottingId);
-      localStorage.setItem('smpjdc_last_plotting_id', currentPlottingId);
+      localStorage.setItem('cmdigital_last_plotting_id', currentPlottingId);
     } else if (!myPlotting) {
       setLastPlottingId('');
-      localStorage.removeItem('smpjdc_last_plotting_id');
+      localStorage.removeItem('cmdigital_last_plotting_id');
     }
   }, [myPlotting, todayLog]);
 
@@ -1166,7 +1166,7 @@ export default function SecurityPatrolApp({
       setScanning(false);
       setScanError('');
     } else {
-      setScanError(`QR Code "${cleanVal}" tidak terdaftar di checkpoint JDC.`);
+      setScanError(`QR Code "${cleanVal}" tidak terdaftar di checkpoint CMD.`);
       // Sembunyikan error setelah 4 detik agar bisa mencoba scan ulang dengan nyaman
       setTimeout(() => {
         setScanError('');
@@ -1183,7 +1183,7 @@ export default function SecurityPatrolApp({
     const r = {
       timestamp: timeScan.toISOString(), timestampEnd: new Date().toISOString(),
       userId: currentUser.id, userName: currentUser.nama,
-      areaId: area.id, gedung: 'JDC', lantai: area.lantai, zona: area.zona, titik: area.titik,
+      areaId: area.id, gedung: 'CMD', lantai: area.lantai, zona: area.zona, titik: area.titik,
       shift, kategori: '-', kodeTemuan: '-', temuan: 'Normal', status: 'normal',
       kondisi: 'Aman dan Kondusif', severity: 'Rendah', keterangan: '', foto: null,
       antiFraud: fraudData
@@ -1206,7 +1206,7 @@ export default function SecurityPatrolApp({
     const r = {
       timestamp: timeScan.toISOString(), timestampEnd: new Date().toISOString(),
       userId: currentUser.id, userName: currentUser.nama,
-      areaId: area.id, gedung: 'JDC', lantai: area.lantai, zona: area.zona, titik: area.titik,
+      areaId: area.id, gedung: 'CMD', lantai: area.lantai, zona: area.zona, titik: area.titik,
       shift,
       kategori: categoryName,
       kodeTemuan: isCustomTemuan ? '__lainnya__' : (item?.kode || temuan || ''),
@@ -1291,7 +1291,7 @@ export default function SecurityPatrolApp({
       titik: tLokasi,
       lantai: selectedArea?.lantai || '-',
       zona: selectedArea?.zona || '-',
-      gedung: selectedArea?.gedung || 'SMPJDC - Jakarta Design Center',
+      gedung: selectedArea?.gedung || 'CMMDIGITAL - Gedung Pusat',
       qrCode: selectedArea?.qrCode || 'MANUAL',
       userName: currentUser.nama,
       userId: currentUser.id,
@@ -1472,7 +1472,7 @@ export default function SecurityPatrolApp({
             <img src="logo.png" alt="" className="mobile-logo logo-3d" />
           </div>
           <div className="mobile-brand-title" style={{ justifySelf: 'center', textAlign: 'center' }}>
-            <h4 className="mobile-app-title" style={{ margin: 0 }}>SMPJDC</h4>
+            <h4 className="mobile-app-title" style={{ margin: 0 }}>CMMDIGITAL</h4>
             <p className="mobile-app-sub" style={{ margin: 0 }}>Aplikasi Patroli</p>
           </div>
           <div style={{ justifySelf: 'end', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -1772,7 +1772,7 @@ export default function SecurityPatrolApp({
                 </div>
                 <div style={{ width: '100%', borderTop: '1px solid rgba(220,38,38,0.2)', paddingTop: '0.85rem', fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
                   <AlertTriangle size={12} />
-                  <span>JDC Security Patrol — Anti-Tamper & Fake Prevention Active</span>
+                  <span>CMD Security Patrol — Anti-Tamper & Fake Prevention Active</span>
                 </div>
               </div>
             ) : (
@@ -1882,7 +1882,7 @@ export default function SecurityPatrolApp({
                             value={presensiBarcodeInput} 
                             onChange={e => { setPresensiBarcodeInput(e.target.value); setPresensiScanError(''); }}
                             onKeyDown={e => e.key === 'Enter' && handlePresensiBarcodeScan()}
-                            placeholder="Contoh: JDC-MASTER-PRESENSI" 
+                            placeholder="Contoh: CMD-MASTER-PRESENSI" 
                             className="modern-input" 
                             style={{ flex: 1, fontSize: '0.8rem', padding: '0.4rem 0.6rem' }} 
                           />
@@ -2220,7 +2220,7 @@ export default function SecurityPatrolApp({
                               Lat: {gpsLocation.lat.toFixed(4)}, Long: {gpsLocation.lng.toFixed(4)}
                             </div>
                             <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>
-                              GPS: {gpsLoading ? 'Melacak koordinat...' : gpsCheckResult === 'mocked' ? `Dilarang: ${gpsBlockReason}` : `Terverifikasi (JDC Radius)`}
+                              GPS: {gpsLoading ? 'Melacak koordinat...' : gpsCheckResult === 'mocked' ? `Dilarang: ${gpsBlockReason}` : `Terverifikasi (CMD Radius)`}
                             </div>
                           </div>
                         </div>
@@ -2515,7 +2515,7 @@ export default function SecurityPatrolApp({
                   <div className="scan-input-group">
                     <input type="text" value={barcodeInput} onChange={e => { setBarcodeInput(e.target.value); setScanError(''); }}
                       onKeyDown={e => e.key === 'Enter' && handleBarcodeScan()}
-                      placeholder="Cth: JDC-BSMT-B-1" className="modern-input" style={{ flex: 1, fontSize: '0.8rem' }} />
+                      placeholder="Cth: CMD-BSMT-B-1" className="modern-input" style={{ flex: 1, fontSize: '0.8rem' }} />
                     <button onClick={handleBarcodeScan} className="btn-primary" style={{ padding: '0.4rem 0.8rem', whiteSpace: 'nowrap', fontSize: '0.75rem', fontWeight: 700 }}><QrCode size={13} /> Scan</button>
                   </div>
                   {scanError && <div style={{ fontSize: '0.65rem', color: 'var(--color-danger)', marginTop: '0.3rem', fontWeight: 600 }}>⚠️ {scanError}</div>}
@@ -3172,7 +3172,7 @@ export default function SecurityPatrolApp({
           clear: 'both'
         }}>
           <span style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>
-            © 2026 <strong style={{ color: 'var(--color-primary)' }}>SMPJDC</strong>. Hak Cipta Dilindungi.
+            © 2026 <strong style={{ color: 'var(--color-primary)' }}>CMMDIGITAL</strong>. Hak Cipta Dilindungi.
           </span>
           <div className="ornamental-watermark" style={{ margin: '0.5rem auto 0.2rem', width: '100%', maxWidth: '340px' }}>
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>

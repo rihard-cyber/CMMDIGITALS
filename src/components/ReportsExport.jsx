@@ -99,7 +99,7 @@ export default function ReportsExport({ reports, findings, users, onUpdateFindin
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `laporan_keamanan_smpjdc_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("download", `laporan_keamanan_cmdigital_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -109,7 +109,7 @@ export default function ReportsExport({ reports, findings, users, onUpdateFindin
   const handleExportPDF = () => {
     const ok = exportTableToPdf({
       title: 'Hasil Patroli Barcode',
-      fileName: `hasil-patroli-barcode-smpjdc-${formatDateForFile()}`,
+      fileName: `hasil-patroli-barcode-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Shift', value: filterShift },
         { label: 'Pos/Titik', value: filterPost },
@@ -151,7 +151,7 @@ export default function ReportsExport({ reports, findings, users, onUpdateFindin
   const handleExportFindingsPDF = () => {
     const ok = exportTableToPdf({
       title: 'Tiket Temuan & Tindak Lanjut',
-      fileName: `tiket-temuan-smpjdc-${formatDateForFile()}`,
+      fileName: `tiket-temuan-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Total Temuan', value: findings.length },
         { label: 'Open', value: findings.filter(f => f.status !== 'Closed').length },

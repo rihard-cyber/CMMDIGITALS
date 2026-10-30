@@ -9,14 +9,14 @@ let currentTenantId = null;
 /** Set tenant aktif. Panggil setelah user memilih tenant di layar login. */
 const setCurrentTenant = (tenantId) => {
   currentTenantId = tenantId || null;
-  try { localStorage.setItem('smpjdc_active_tenant', tenantId || ''); } catch (_) {}
+  try { localStorage.setItem('cmdigital_active_tenant', tenantId || ''); } catch (_) {}
 };
 
 /** Ambil tenant aktif yang sedang dipilih. */
 const getCurrentTenant = () => {
   if (currentTenantId) return currentTenantId;
   try {
-    const stored = localStorage.getItem('smpjdc_active_tenant');
+    const stored = localStorage.getItem('cmdigital_active_tenant');
     if (stored) currentTenantId = stored;
   } catch (_) {}
   return currentTenantId;
@@ -25,7 +25,7 @@ const getCurrentTenant = () => {
 /** Hapus konteks tenant (logout). */
 const clearCurrentTenant = () => {
   currentTenantId = null;
-  try { localStorage.removeItem('smpjdc_active_tenant'); } catch (_) {}
+  try { localStorage.removeItem('cmdigital_active_tenant'); } catch (_) {}
 };
 
 export const initSupabase = () => {
@@ -79,7 +79,7 @@ const KNOWN_TABLE_COLUMNS = {
   found_items: new Set(['id', 'item_code', 'tanggal_penemuan', 'jam_penemuan', 'tanggal_laporan', 'nama_barang', 'jenis_barang', 'kategori_barang', 'lokasi_penemuan', 'nama_penemu', 'kategori_penemu', 'kontak_penemu', 'keterangan_penemu', 'foto_barang', 'photos', 'status', 'nama_pengambil', 'kontak_pengambil', 'no_identitas_pengambil', 'foto_identitas', 'diserahkan_oleh', 'tanggal_pengambilan', 'catatan_serah_terima', 'keterangan', 'created_at', 'firebase_saved_at', 'updated_at', 'tenant_id']),
   rosters: new Set(['year_month', 'roster_data', 'updated_by', 'created_at', 'updated_at', 'tenant_id']),
   config: new Set(['key', 'data', 'updated_at', 'tenant_id']),
-  tenants: new Set(['id', 'nama', 'kode', 'slug', 'alamat', 'created_at', 'updated_at', 'supabase_id']),
+  tenants: new Set(['id', 'nama', 'kode', 'slug', 'alamat', 'firebase_saved_at', 'created_at', 'updated_at', 'supabase_id']),
 };
 
 function prepareData(data, tableName) {

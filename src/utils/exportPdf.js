@@ -1,4 +1,4 @@
-const REPORT_BRAND = 'SMPJDC - Jakarta Design Center';
+const REPORT_BRAND = 'CMMDIGITAL - Multi-Tenant Building';
 
 const MONTHS_ID = [
   'JANUARI', 'FEBRUARI', 'MARET', 'APRIL', 'MEI', 'JUNI',
@@ -94,11 +94,11 @@ export function exportTableToPdf({
   subtitle = REPORT_BRAND,
   columns,
   rows,
-  fileName = 'laporan-smpjdc',
+  fileName = 'laporan-cmdigital',
   orientation = 'landscape',
   meta = [],
   emptyText = 'Tidak ada data untuk dicetak.',
-  footer = 'Dicetak dari Sistem Management Keamanan JDC'
+  footer = 'Dicetak dari Sistem Manajemen CMMDIGITAL'
 }) {
   if (typeof window === 'undefined') return false;
 

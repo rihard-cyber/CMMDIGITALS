@@ -256,7 +256,7 @@ export default function ManagementDashboard({
     const unresolved = combinedFindings.filter(f => f.status !== 'Closed').length;
     const critical = combinedFindings.filter(f => f.severity === 'Kritis' && f.status !== 'Closed').length;
     const waSent = combinedFindings.filter(f => f.waStatus?.startsWith('Terkirim')).length;
-    return `Ringkasan SMPJDC: Hari ini tercatat ${totalPatrolsToday} scan patroli. ` +
+    return `Ringkasan CMMDIGITAL: Hari ini tercatat ${totalPatrolsToday} scan patroli. ` +
       `${patrolledAreasToday.size} dari ${areas.length} area telah dijamah (${areas.length > 0 ? Math.round((patrolledAreasToday.size/areas.length)*100) : 0}% kepatuhan). ` +
       `Terdapat ${unresolved} tiket temuan aktif${critical > 0 ? `, ${critical} di antaranya KRITIS` : ''}. ` +
       `${waSent} tiket telah diteruskan via WhatsApp. ` +
@@ -266,7 +266,7 @@ export default function ManagementDashboard({
   const handleExportCommandFindingsPDF = () => {
     const ok = exportTableToPdf({
       title: 'Tiket Temuan & Disposisi Operasional',
-      fileName: `dashboard-temuan-disposisi-smpjdc-${formatDateForFile()}`,
+      fileName: `dashboard-temuan-disposisi-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Filter Dept', value: activeTab === 'semua' ? 'Semua' : activeTab },
         { label: 'Total Tiket', value: filteredFindings.length },
@@ -306,7 +306,7 @@ export default function ManagementDashboard({
   const handleExportDashboardComplaintsPDF = () => {
     const ok = exportTableToPdf({
       title: 'Tiketing Komplain / Pengaduan Tenant, Pengunjung',
-      fileName: `dashboard-komplain-tenant-smpjdc-${formatDateForFile()}`,
+      fileName: `dashboard-komplain-tenant-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Filter Status', value: complaintFilter === 'all' ? 'Semua' : complaintFilter },
         { label: 'Total Komplain', value: filteredComplaints.length },
@@ -461,7 +461,7 @@ export default function ManagementDashboard({
           iconAnchor: [7, 7]
         });
         window.L.marker([defaultLat, defaultLng], { icon: jdcIcon }).addTo(map)
-          .bindPopup('<b>Jakarta Design Center (JDC)</b><br/>Gedung Pusat Keamanan').openPopup();
+          .bindPopup('<b>Jakarta Design Center (CMD)</b><br/>Gedung Pusat Keamanan').openPopup();
 
         markerGroupRef.current = window.L.layerGroup().addTo(map);
       }
@@ -983,7 +983,7 @@ export default function ManagementDashboard({
             
             {/* Widget 1: Concentric rings */}
             <div className="cyber-card">
-              <div className="cyber-title"><Activity size={12} className="cyber-title-accent"/> Persentase Operasional JDC</div>
+              <div className="cyber-title"><Activity size={12} className="cyber-title-accent"/> Persentase Operasional CMD</div>
               <div className="cyber-radial-container">
                 <svg width="110" height="110" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
                   <circle cx="50" cy="50" r="40" fill="transparent" className="cyber-track-ring" strokeWidth="6" />
@@ -1282,7 +1282,7 @@ export default function ManagementDashboard({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
             <Sparkles size={16} style={{ color: '#60a5fa' }} />
-            <h4 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Security Summary - SMPJDC</h4>
+            <h4 style={{ fontSize: '0.78rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI Security Summary - CMMDIGITAL</h4>
           </div>
           <span style={{ fontSize: '0.6rem', color: '#60a5fa', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
             <Zap size={10} /> Auto-Generated
@@ -1746,7 +1746,7 @@ export default function ManagementDashboard({
                                         updatedAt: new Date().toISOString()
                                       });
                                       const waMsg = encodeURIComponent(
-                                        `*📋 KOMPLAIN MASUK JDC*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n${contact.emoji} *Disposisi ke: Ka. ${d}*\n\n🆔 *Tiket:* ${c.ticketId}\n🏢 *Tenant:* ${c.tenant} • Lt.${c.floor}\n📝 *Deskripsi:* ${c.description}\n\n⚡ *Mohon segera ditindaklanjuti!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n_Sistem Manajemen Keamanan JDC_`
+                                        `*📋 KOMPLAIN MASUK CMD*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n${contact.emoji} *Disposisi ke: Ka. ${d}*\n\n🆔 *Tiket:* ${c.ticketId}\n🏢 *Tenant:* ${c.tenant} • Lt.${c.floor}\n📝 *Deskripsi:* ${c.description}\n\n⚡ *Mohon segera ditindaklanjuti!*\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n_Sistem Manajemen Keamanan CMD_`
                                       );
                                       window.open(`https://api.whatsapp.com/send?phone=${contact.nomor}&text=${waMsg}`, '_blank', 'noopener');
                                     }} style={{
@@ -2070,7 +2070,7 @@ export default function ManagementDashboard({
                           onClick={() => {
                             const openItems = findingsByDept[dept].filter(f => f.status !== 'Closed');
                             const summaryMsg = 
-                              `*${info.emoji} REKAP TIKET OPEN - SMPJDC*\n` +
+                              `*${info.emoji} REKAP TIKET OPEN - CMMDIGITAL*\n` +
                               `━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
                               `Yth. ${info.nama},\n\n` +
                               `Berikut daftar temuan aktif yang memerlukan tindakan:\n\n` +
@@ -2078,7 +2078,7 @@ export default function ManagementDashboard({
                                 `${i+1}. [${f.severity}] ${f.kategori}\n   📍 ${f.area}\n   📋 ${f.detail}\n`
                               ).join('\n') +
                               `\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n` +
-                              `Total: ${openItems.length} tiket aktif\n_Sistem Manajemen Keamanan JDC_`;
+                              `Total: ${openItems.length} tiket aktif\n_Sistem Manajemen Keamanan CMD_`;
                             window.open(`https://api.whatsapp.com/send?phone=${info.nomor}&text=${encodeURIComponent(summaryMsg)}`, '_blank', 'noopener');
                           }}
                           className="btn-primary"
@@ -2096,7 +2096,7 @@ export default function ManagementDashboard({
             {onArchiveOldData && (
               <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid rgba(239,68,68,0.2)' }}>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 800, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#ef4444' }}>
-                  <AlertTriangle size={16}/> Pembersihan Data Lama JDC (&gt; 90 Hari)
+                  <AlertTriangle size={16}/> Pembersihan Data Lama CMD (&gt; 90 Hari)
                 </h4>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: 1.5 }}>
                   Pembersihan otomatis data log patroli, laporan temuan, mutasi harian, data absensi regu, dan komplain tenant yang telah berusia **lebih dari 90 hari** agar kapasitas penyimpanan cloud tetap efisien dan performa loading dashboard tetap responsif.

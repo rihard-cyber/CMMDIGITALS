@@ -21,7 +21,7 @@ export default function TargetDashboard({ reports, findings, areas, currentUser,
   const today = new Date().toISOString().split('T')[0];
   const reportsToday = reports.filter(r => r.timestamp?.startsWith(today));
   
-  // Compliance Rate (how many JDC areas visited today vs total areas)
+  // Compliance Rate (how many CMMDIGITAL areas visited today vs total areas)
   const uniqueVisitedToday = new Set(reportsToday.map(r => r.areaId)).size;
   const complianceRate = Math.round((uniqueVisitedToday / totalAreas) * 100) || 0;
 
@@ -89,7 +89,7 @@ export default function TargetDashboard({ reports, findings, areas, currentUser,
                 <div style={{ width: `${complianceRate}%`, height: '100%', background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', borderRadius: '4px' }} />
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                {uniqueVisitedToday} dari {totalAreas} titik checkpoint SMPJDC telah dipatroli hari ini.
+                {uniqueVisitedToday} dari {totalAreas} titik checkpoint CMMDIGITAL telah dipatroli hari ini.
               </p>
             </div>
 
@@ -122,16 +122,16 @@ export default function TargetDashboard({ reports, findings, areas, currentUser,
                 <div style={{ width: `${parseInt(slaCompliance) || 0}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)', borderRadius: '4px' }} />
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-                Penyelesaian kendala SMPJDC memenuhi batas kesepakatan SLA.
+                Penyelesaian kendala CMMDIGITAL memenuhi batas kesepakatan SLA.
               </p>
             </div>
 
           </div>
 
-          {/* JDC Compliance Details list */}
+          {/* CMD Compliance Details list */}
           <div className="glass-panel" style={{ padding: '1.5rem' }}>
             <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Activity size={18} className="text-primary" /> Target & Pencapaian Per Lantai SMPJDC
+              <Activity size={18} className="text-primary" /> Target & Pencapaian Per Lantai CMMDIGITAL
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

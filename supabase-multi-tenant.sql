@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tenants (
   kode TEXT UNIQUE NOT NULL,
   slug TEXT UNIQUE NOT NULL,
   alamat TEXT,
+  firebase_saved_at TIMESTAMPTZ DEFAULT now(),
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );

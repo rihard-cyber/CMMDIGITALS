@@ -168,7 +168,7 @@ export default function MutasiPenjagaan({ currentUser, logs, onAddLog, onDeleteL
   const handleExportMutasiPDF = () => {
     const ok = exportTableToPdf({
       title: 'Buku Mutasi Jaga',
-      fileName: `mutasi-pelaporan-smpjdc-${formatDateForFile()}`,
+      fileName: `mutasi-pelaporan-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Filter Kategori', value: filterKat ? getKategoriLabel(filterKat) : 'Semua' },
         { label: 'Pencarian', value: search || '-' },

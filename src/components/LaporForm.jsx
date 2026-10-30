@@ -1,6 +1,6 @@
 /**
  * =======================================================
- *   SMPJDC SECURITY MANAGEMENT SYSTEM
+ *   CMMDIGITAL SECURITY MANAGEMENT SYSTEM
  *   Module: Fast Report Form (Laporan Cepat)
  *   Signed by: Richard Meha (by -Richard)
  *   Last Maintained: 2026-06-07
@@ -78,7 +78,7 @@ export default function LaporForm({ currentUser, areas, posList = [], onAddRepor
         userId: currentUser.id,
         userName: currentUser.nama,
         areaId: area.id,
-        gedung: area.gedung || 'SMPJDC',
+        gedung: area.gedung || 'CMMDIGITAL',
         lantai: area.lantai,
         zona: area.zona,
         titik: area.titik,

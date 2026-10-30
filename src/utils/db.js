@@ -1,9 +1,9 @@
 import localforage from 'localforage';
 
 localforage.config({
-  name: 'smpjdc',
-  storeName: 'smpjdc_store',
-  description: 'SMPJDC offline data store'
+  name: 'cmdigital',
+  storeName: 'cmdigital_store',
+  description: 'CMMDIGITAL offline data store'
 });
 
 const MIGRATED_KEY = '__db_migrated_v2';
@@ -17,17 +17,17 @@ async function migrateFromLocalStorage() {
   if (done) return [];
 
   const KEYS_TO_MIGRATE = [
-    'sapujagat_users', 'sapujagat_users_sig', 'smpjdc_session',
-    'smpjdc_last_route', 'smpjdc_theme', 'sapujagat_areas',
-    'sapujagat_reports', 'sapujagat_findings', 'smpjdc_pos_list',
-    'smpjdc_mutasi_logs', 'smpjdc_attendance_logs', 'smpjdc_complaints',
-    'smpjdc_wa_contacts', 'smpjdc_login_attempts', 'smpjdc_db_version',
-    'sapujagat_offline_queue', 'smpjdc_last_plotting_id', 'smpjdc_qr_counter',
-    'smpjdc_custom_complaint_url'
+    'cmdigital_users', 'cmdigital_users_sig', 'cmdigital_session',
+    'cmdigital_last_route', 'cmdigital_theme', 'cmdigital_areas',
+    'cmdigital_reports', 'cmdigital_findings', 'cmdigital_pos_list',
+    'cmdigital_mutasi_logs', 'cmdigital_attendance_logs', 'cmdigital_complaints',
+    'cmdigital_wa_contacts', 'cmdigital_login_attempts', 'cmdigital_db_version',
+    'cmdigital_offline_queue', 'cmdigital_last_plotting_id', 'cmdigital_qr_counter',
+    'cmdigital_custom_complaint_url'
   ];
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i);
-    if (k && k.startsWith('smpjdc_pin_')) KEYS_TO_MIGRATE.push(k);
+    if (k && k.startsWith('cmdigital_pin_')) KEYS_TO_MIGRATE.push(k);
   }
 
   const migrated = [];

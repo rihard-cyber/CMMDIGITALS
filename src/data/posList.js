@@ -1,10 +1,10 @@
 const INITIAL_POS_LIST = [
   {
-    id: 'pos-jdc',
-    lantai: 'Pos JDC',
-    titik: 'Pos JDC',
-    keterangan: 'Pos jaga utama JDC',
-    kode: 'PJDC'
+    id: 'pos-cmd',
+    lantai: 'Pos CMMDIGITAL',
+    titik: 'Pos CMMDIGITAL',
+    keterangan: 'Pos jaga utama CMMDIGITAL',
+    kode: 'PCMD'
   },
   {
     id: 'pos-00-area',

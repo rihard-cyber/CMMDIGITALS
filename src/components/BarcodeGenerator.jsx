@@ -90,7 +90,7 @@ export const buildBarcodeCode = (floorVal, zoneVal, numVal) => {
   const fCode = getFloorCode(floorVal);
   const zCode = getZoneCode(zoneVal);
   const nCode = String(numVal || '').trim();
-  return `JDC-${fCode}-${zCode}-${nCode}`;
+  return `CMD-${fCode}-${zCode}-${nCode}`;
 };
 
 const REGU_OPTIONS = ['Regu A', 'Regu B', 'Regu C', 'Regu D'];
@@ -121,7 +121,7 @@ export default function BarcodeGenerator({
   const [titik, setTitik] = useState('');
   const [nomorTitik, setNomorTitik] = useState('');
   const [qrCounter, setQrCounter] = useState(() => {
-    try { return parseInt(localStorage.getItem('smpjdc_qr_counter') || '1'); }
+    try { return parseInt(localStorage.getItem('cmdigital_qr_counter') || '1'); }
     catch { return 1; }
   });
 
@@ -163,7 +163,7 @@ export default function BarcodeGenerator({
   }, [areas]);
 
   useEffect(() => {
-    generateQRDataURL('JDC-MASTER-PRESENSI')
+    generateQRDataURL('CMD-MASTER-PRESENSI')
       .then(url => setPresensiQrUrl(url))
       .catch(err => console.warn('Failed to load Master Presensi QR:', err));
   }, [generateQRDataURL]);
@@ -270,7 +270,7 @@ export default function BarcodeGenerator({
       ? buildBarcodeCode(floorFinal, zoneFinal, inputNomor)
       : getQRPattern();
     onAddArea({
-      gedung: 'SMPJDC - Jakarta Design Center',
+      gedung: 'CMMDIGITAL - Gedung Pusat',
       lantai: floorFinal,
       zona: zoneFinal,
       nomorTitik: inputNomor,
@@ -279,7 +279,7 @@ export default function BarcodeGenerator({
     });
     const newCount = qrCounter + 1;
     setQrCounter(newCount);
-    localStorage.setItem('smpjdc_qr_counter', String(newCount));
+    localStorage.setItem('cmdigital_qr_counter', String(newCount));
     setTitik('');
   };
 
@@ -404,7 +404,7 @@ export default function BarcodeGenerator({
               <div class="barcode-code">${area.qrCode}</div>
               <div class="barcode-loc">${area.titik}</div>
             </div>
-            <p class="no-print">Format Standar Barcode Checkpoint SMPJDC</p>
+            <p class="no-print">Format Standar Barcode Checkpoint CMMDIGITAL</p>
             <script>window.onload=function(){setTimeout(function(){window.print();},400)};<\/script>
           </body>
         </html>
@@ -477,7 +477,7 @@ export default function BarcodeGenerator({
         <html>
           <head>
             <meta charset="utf-8" />
-            <title>Cetak Barcode Checkpoint SMPJDC (6 Barcode / HVS)</title>
+            <title>Cetak Barcode Checkpoint CMMDIGITAL (6 Barcode / HVS)</title>
             <style>
               @page {
                 size: A4 portrait;
@@ -887,7 +887,7 @@ export default function BarcodeGenerator({
     const rows = getSortedAreas(filteredAreas);
     const ok = exportTableToPdf({
       title: 'Master Checkpoint Barcode Patroli',
-      fileName: `master-checkpoint-barcode-smpjdc-${formatDateForFile()}`,
+      fileName: `master-checkpoint-barcode-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Pencarian', value: searchArea || '-' },
         { label: 'Total Checkpoint', value: rows.length },
@@ -907,7 +907,7 @@ export default function BarcodeGenerator({
       rows: rows.map((area, idx) => [
         idx + 1,
         { text: area.qrCode || '-', className: 'mono' },
-        area.gedung || 'SMPJDC - Jakarta Design Center',
+        area.gedung || 'CMMDIGITAL - Gedung Pusat',
         ['1','2','3','4','5','6'].includes(area.lantai) ? `Lantai ${area.lantai}` : (area.lantai || '-'),
         area.zona || '-',
         area.nomorTitik || '-',
@@ -921,7 +921,7 @@ export default function BarcodeGenerator({
   const handleExportPosPDF = () => {
     const ok = exportTableToPdf({
       title: 'Master Pos Jaga Penjagaan',
-      fileName: `master-pos-jaga-smpjdc-${formatDateForFile()}`,
+      fileName: `master-pos-jaga-cmdigital-${formatDateForFile()}`,
       meta: [
         { label: 'Pencarian', value: searchPos || '-' },
         { label: 'Total Pos', value: filteredPosList.length },
@@ -1011,7 +1011,7 @@ export default function BarcodeGenerator({
                 <label className="form-label">LOKASI / GEDUNG</label>
                 <div className="form-input-wrap" style={{ opacity: 0.6 }}>
                   <Building size={16} />
-                  <input type="text" value="SMPJDC - Jakarta Design Center" disabled className="form-input" />
+                  <input type="text" value="CMMDIGITAL - Gedung Pusat" disabled className="form-input" />
                 </div>
               </div>
 
@@ -1052,7 +1052,7 @@ export default function BarcodeGenerator({
               {(titik || nomorTitik) && (
                 <div className="glass-panel" style={{ padding: '0.75rem', background: 'rgba(59,130,246,0.02)', fontSize: '0.75rem', borderStyle: 'dashed' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                    <div className="preview-row"><span className="preview-label">Lokasi:</span><span className="preview-value">SMPJDC - Jakarta Design Center</span></div>
+                    <div className="preview-row"><span className="preview-label">Lokasi:</span><span className="preview-value">CMMDIGITAL - Gedung Pusat</span></div>
                     <div className="preview-row"><span className="preview-label">Lantai:</span><span className="preview-value">{FLOOR_OPTIONS.find(f => f.value === floor)?.label || floorFinal}</span></div>
                     <div className="preview-row"><span className="preview-label">No. Titik:</span><span className="preview-value">{nomorTitik || '-'}</span></div>
                     <div className="preview-row"><span className="preview-label">Zona:</span><span className="preview-value">{zoneFinal}</span></div>
@@ -1233,8 +1233,8 @@ export default function BarcodeGenerator({
                   </div>
                   <button onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=SMPJDC-BULK-${bulkCount}`;
-                    link.download = `smpjdc-${bulkCount}-barcodes.png`;
+                    link.href = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=CMD-BULK-${bulkCount}`;
+                    link.download = `cmdigital-${bulkCount}-barcodes.png`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -1538,7 +1538,7 @@ export default function BarcodeGenerator({
                 <span>MASTER QR CODE PRESENSI STAFF</span>
               </h2>
               <span className="badge badge-info" style={{ fontSize: '0.68rem', padding: '0.25rem 0.5rem', alignSelf: 'center', background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.25)' }}>
-                📍 Ruang Staff / Kantor Security JDC
+                📍 Ruang Staff / Kantor Security CMMDIGITAL
               </span>
             </div>
 
@@ -1567,7 +1567,7 @@ export default function BarcodeGenerator({
 
             {/* Metadata code label */}
             <div style={{ fontFamily: 'monospace', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)', background: 'rgba(59,130,246,0.08)', padding: '0.3rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.18)' }}>
-              JDC-MASTER-PRESENSI
+              CMD-MASTER-PRESENSI
             </div>
 
             {/* Actions for Master QR */}
@@ -1576,7 +1576,7 @@ export default function BarcodeGenerator({
                 type="button"
                 className="btn-primary"
                 style={{ flex: 1, minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700 }}
-                onClick={() => handleDownloadQR({ qrCode: 'JDC-MASTER-PRESENSI' })}
+                onClick={() => handleDownloadQR({ qrCode: 'CMD-MASTER-PRESENSI' })}
               >
                 <Download size={14} /> Download PNG
               </button>
@@ -1585,9 +1585,9 @@ export default function BarcodeGenerator({
                 className="btn-secondary"
                 style={{ flex: 1, minHeight: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', fontSize: '0.78rem', fontWeight: 700 }}
                 onClick={() => handlePrintQR({
-                  qrCode: 'JDC-MASTER-PRESENSI',
+                  qrCode: 'CMD-MASTER-PRESENSI',
                   titik: 'Master Presensi Staff Room',
-                  gedung: 'SMPJDC',
+                  gedung: 'CMMDIGITAL',
                   lantai: 'Staff Room',
                   zona: 'Staff Office'
                 })}

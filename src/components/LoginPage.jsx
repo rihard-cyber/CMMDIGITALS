@@ -53,7 +53,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
         return;
       }
 
-      let storedPin = localStorage.getItem(`smpjdc_pin_${user.id}`);
+      let storedPin = localStorage.getItem(`cmdigital_pin_${user.id}`);
       const pinSuffixHash = hashPin(user.nrp.slice(-4));
       const fullNrpHash = hashPin(user.nrp);
 
@@ -70,13 +70,13 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
 
       // Pastikan hash PIN tersimpan
       if (!storedPin || !verifyPin(pin, storedPin)) {
-        localStorage.setItem(`smpjdc_pin_${user.id}`, hashPin(pin));
+        localStorage.setItem(`cmdigital_pin_${user.id}`, hashPin(pin));
       }
 
       recordLoginAttempt(nrp.trim(), true);
       const session = createSession(user.id);
       session.roleToken = signRoleInSession(user.id, user.jabatan);
-      localStorage.setItem('smpjdc_session', JSON.stringify(session));
+      localStorage.setItem('cmdigital_session', JSON.stringify(session));
       setAuthedUser(user);
       setTenantStep(true);
       setLoading(false);
@@ -117,10 +117,10 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
       
       localStorage.setItem('sapujagat_users', JSON.stringify([newUser]));
       signUserData([newUser]);
-      localStorage.setItem(`smpjdc_pin_${newUser.id}`, hashed);
+      localStorage.setItem(`cmdigital_pin_${newUser.id}`, hashed);
       const session = createSession(newUser.id);
       session.roleToken = signRoleInSession(newUser.id, newUser.jabatan);
-      localStorage.setItem('smpjdc_session', JSON.stringify(session));
+      localStorage.setItem('cmdigital_session', JSON.stringify(session));
       
       onSetup(newUser);
       setLoading(false);
@@ -154,13 +154,13 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
       setCurrentTenant(selectedTenant.slug || selectedTenant.id);
 
       // Simpan tenant aktif ke session agar App.jsx tahu
-      const sessionStr = localStorage.getItem('smpjdc_session');
+      const sessionStr = localStorage.getItem('cmdigital_session');
       let session = {};
       try { session = JSON.parse(sessionStr || '{}'); } catch (_) {}
       session.tenantId = selectedTenant.id;
       session.tenantSlug = selectedTenant.slug;
       session.tenantNama = selectedTenant.nama;
-      localStorage.setItem('smpjdc_session', JSON.stringify(session));
+      localStorage.setItem('cmdigital_session', JSON.stringify(session));
 
       // Pindah ke dashboard dengan user + tenant
       onLogin({ ...authedUser, tenantId: selectedTenant.id, tenantSlug: selectedTenant.slug, tenantNama: selectedTenant.nama });
@@ -185,7 +185,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
           <div className="hud-ring ring-inner"></div>
           <div className="hud-ring ring-dashed"></div>
           <div className="splash-logo-container">
-            <img src="logo.png" alt="SMPJDC" className="splash-logo cyber-logo logo-3d-spin" />
+            <img src="logo.png" alt="CMMDIGITAL" className="splash-logo cyber-logo logo-3d-spin" />
           </div>
         </div>
         <div className="cyber-progress-container">
@@ -229,7 +229,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
             <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.8, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
           </div>
           <span style={{ fontSize: '0.62rem', color: '#c7d2fe', letterSpacing: '0.12em', marginTop: '0.2rem', textTransform: 'uppercase', fontWeight: 'bold' }}>
-            ★ JDC SECURITY CORE ARCHITECT ★
+            ★ CMMDIGITAL CORE ARCHITECT ★
           </span>
         </div>
       </div>
@@ -247,9 +247,9 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
           <div className="login-card">
             <div className="login-header">
               <div className="login-logo-ring">
-                <img src="logo.png" alt="SMPJDC" className="login-logo logo-3d" />
+                <img src="logo.png" alt="CMMDIGITAL" className="login-logo logo-3d" />
               </div>
-              <h1 className="login-title">Setup Awal SMPJDC</h1>
+              <h1 className="login-title">Setup Awal CMMDIGITAL</h1>
               <p className="login-subtitle">Buat akun Admin Super untuk memulai</p>
             </div>
 
@@ -347,7 +347,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
           <div className="login-card">
             <div className="login-header">
               <div className="login-logo-ring">
-                <img src="logo.png" alt="SMPJDC" className="login-logo logo-3d" />
+                <img src="logo.png" alt="CMMDIGITAL" className="login-logo logo-3d" />
               </div>
               <h1 className="login-title">Pilih Lokasi</h1>
               <p className="login-subtitle">
@@ -437,7 +437,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
         <div className="login-card">
           <div className="login-header">
             <div className="login-logo-ring">
-              <img src="logo.png" alt="SMPJDC" className="login-logo logo-3d" />
+              <img src="logo.png" alt="CMMDIGITAL" className="login-logo logo-3d" />
             </div>
             <h1 className="login-title">CMMDIGITAL</h1>
             <p className="login-subtitle">SISTEM MANAGEMENT MULTI-TENANT</p>
