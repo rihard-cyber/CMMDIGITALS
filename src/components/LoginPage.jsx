@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, User, Lock, Eye, EyeOff, Smartphone, Building, Clock, Loader, LogIn, Building2 } from 'lucide-react';
 import { hashPin, verifyPin, createSession, getLoginAttempts, recordLoginAttempt, signRoleInSession, signUserData } from '../utils/security';
-import { subscribeTenants, setCurrentTenant, getCurrentTenant } from '../utils/supabase';
+import { subscribeTenants, setCurrentTenant } from '../utils/supabase';
 
 export default function LoginPage({ users: usersProp = [], onLogin, onSetup, hasUsers, firebaseUsersLoaded = true }) {
   const [nrp, setNrp] = useState('');
@@ -150,8 +150,8 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
     }
     setLoading(true);
     setTimeout(() => {
-      // Set konteks tenant di Supabase (untuk RLS isolation)
-      setCurrentTenant(selectedTenant.slug || selectedTenant.id);
+      // Set konteks tenant aktif — selalu pakai tenants.id (bukan slug)
+      setCurrentTenant(selectedTenant.id);
 
       // Simpan tenant aktif ke session agar App.jsx tahu
       const sessionStr = localStorage.getItem('cmdigital_session');

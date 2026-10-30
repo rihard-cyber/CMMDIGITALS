@@ -27,6 +27,9 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE INDEX IF NOT EXISTS idx_tenants_id ON tenants(id);
 CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug);
 
+-- Pastikan kolom firebase_saved_at ada juga pada tabel tenants yang sudah dibuat sebelumnya
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS firebase_saved_at TIMESTAMPTZ DEFAULT now();
+
 -- Data contoh untuk PT. CMM dan lokasi tender-nya
 INSERT INTO tenants (id, nama, kode, slug, alamat) VALUES
   ('tnt_pt_cmm', 'PT. CMM (Pusat)', 'PT_CMM', 'pt-cmm', 'Pusat PT. CMM'),
@@ -114,62 +117,44 @@ DROP POLICY IF EXISTS "Tenant isolation pos_list" ON pos_list;
 DROP POLICY IF EXISTS "Tenant isolation rosters" ON rosters;
 DROP POLICY IF EXISTS "Tenant isolation config" ON config;
 
--- Policy untuk tabel tenants (bisa dilihat semua tenant, untuk dropdown login)
-CREATE POLICY "Tenants readable by all" ON tenants
-  FOR SELECT TO anon USING (true);
+-- Policy CRUD untuk semua tabel.
+-- CATATAN KEAMANAN: aplikasi memakai login NRP/PIN sendiri (bukan Supabase Auth),
+-- sehingga anon key tidak memiliki klaim tenant. Isolasi data dilakukan di
+-- aplikasi dengan menyaring tenant_id (getCurrentTenant()). Untuk keamanan
+-- tingkat database, migrasikan ke Supabase Auth + JWT claims di kemudian hari.
+-- Tanpa policy ini, seluruh data (users, areas, laporan) tidak bisa dibaca.
+CREATE POLICY "Allow all for anon tenants" ON tenants
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
--- Policy multi-tenant untuk tabel data (hanya data milik tenant aktif)
--- Jika app.tenant_id belum di-set (NULL), tidak ada data yang akan muncul.
--- Ini sengaja, agar data tidak bocor ke tenant lain.
-CREATE POLICY "Tenant isolation users" ON users
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon users" ON users
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation patrol_reports" ON patrol_reports
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon patrol_reports" ON patrol_reports
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation findings" ON findings
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon findings" ON findings
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation attendance_logs" ON attendance_logs
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon attendance_logs" ON attendance_logs
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation mutasi_logs" ON mutasi_logs
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon mutasi_logs" ON mutasi_logs
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation complaints" ON complaints
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon complaints" ON complaints
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation areas" ON areas
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon areas" ON areas
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation pos_list" ON pos_list
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon pos_list" ON pos_list
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation rosters" ON rosters
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon rosters" ON rosters
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY "Tenant isolation config" ON config
-  FOR ALL TO anon
-  USING (tenant_id = current_setting('app.tenant_id', true))
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true));
+CREATE POLICY "Allow all for anon config" ON config
+  FOR ALL TO anon USING (true) WITH CHECK (true);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 5. ENABLE REALTIME PUBLICATION

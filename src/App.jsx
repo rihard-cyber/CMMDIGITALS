@@ -696,10 +696,9 @@ export default function App() {
 
             // Restore tenant aktif dari session (multi-tenant)
             if (session.tenantId) {
-              setCurrentTenant(session.tenantId);
               setCurrentTenantState(session);
-              // Sync ke Supabase client untuk RLS isolation
-              setCurrentTenant(session.tenantSlug || session.tenantId);
+              // Set tenant aktif (id tenant) untuk filter data & stamping tenant_id
+              setCurrentTenant(session.tenantId);
             }
 
             setShowSplash(true);
@@ -1110,9 +1109,9 @@ export default function App() {
 
   // ── MULTI-TENANT: Filter semua data lokal berdasarkan tenant aktif ──
   useEffect(() => {
-    if (!currentTenant) return; // Belum ada tenant aktif, jangan filter
-
-    const tId = currentTenant.id || currentTenant;
+    // Sumber kebenaran tenant adalah helper Supabase (menyimpan tenants.id)
+    const tId = getCurrentTenant();
+    if (!tId) return; // Belum ada tenant aktif, jangan filter
 
     // Filter users: hanya user dengan tenant_id yang sama, atau user tanpa tenant (sistem)
     setUsers(prev => {
@@ -1764,7 +1763,7 @@ export default function App() {
     const timestamp = newReport.timestamp || new Date().toISOString();
     const resolved = resolveActiveShiftAndRegu(currentUser?.id, currentUser?.regu, timestamp, attendanceLogs);
 
-    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+    const tenantId = getCurrentTenant();
 
     let reportData = { 
       id: reportId, 
@@ -2136,7 +2135,7 @@ export default function App() {
     const timestamp = new Date().toISOString();
     const resolved = resolveActiveShiftAndRegu(currentUser?.id, currentUser?.regu, timestamp, attendanceLogs);
 
-    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+    const tenantId = getCurrentTenant();
     let mutasiData = { 
       id, 
       ...log,
@@ -2224,7 +2223,7 @@ export default function App() {
   };
 
   const handleAddComplaint = async (complaint) => {
-    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+    const tenantId = getCurrentTenant();
     let complaintData = { ...complaint, tenant_id: tenantId };
     setComplaints(prev => {
       const updated = [complaintData, ...prev];
@@ -2315,7 +2314,7 @@ export default function App() {
 
   const handleAddArea = (newArea) => {
     const areaId = newArea.qrCode.toLowerCase().replace(/[^a-z0-9]/g, '-');
-    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+    const tenantId = getCurrentTenant();
     const area = { id: areaId, ...newArea, tenant_id: tenantId };
     setAreas(prev => [...prev, area]);
     addAreaToFirestore(area).then(fid => {
@@ -2361,7 +2360,7 @@ export default function App() {
 
   const handleAddPos = (newPos) => {
     const posId = newPos.id || `pos-${Date.now()}`;
-    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+    const tenantId = getCurrentTenant();
     setPosList(prev => [...prev, { id: posId, ...newPos, tenant_id: tenantId }]);
     addPosToFirestore({ id: posId, ...newPos }).then(fid => {
       if (fid) {
@@ -2421,7 +2420,7 @@ export default function App() {
       status: newUser.status || 'Aktif',
       avatar: newUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60',
       email: newUser.email || '',
-      tenant_id: currentTenant?.id || currentTenant || getCurrentTenant()
+      tenant_id: getCurrentTenant()
     };
     setUsers(prev => [...prev, userData]);
     addUserToFirestore(userData).then(fid => {
@@ -2618,9 +2617,9 @@ export default function App() {
 
     // Set konteks tenant dari data login (multi-tenant)
     if (user.tenantId) {
-      setCurrentTenant(user.tenantId);
       setCurrentTenantState(user);
-      setCurrentTenant(user.tenantSlug || user.tenantId);
+      // Selalu gunakan tenants.id sebagai identitas tenant (bukan slug)
+      setCurrentTenant(user.tenantId);
     }
 
     const targetTab = ['Danru', 'Wadanru', 'Anggota'].includes(user.jabatan) ? 'guard-simulator' : 'dashboard';
@@ -3159,7 +3158,7 @@ export default function App() {
                     }
                     return updated;
                   } else {
-                    const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+                    const tenantId = getCurrentTenant();
                     const entry = { id, ...newAttendance, tenant_id: tenantId };
                     addAttendanceLogToFirestore(entry).then(fid => {
                       if (fid) {
@@ -3226,7 +3225,7 @@ export default function App() {
                       }
                       return updated;
                     } else {
-                      const tenantId = currentTenant?.id || currentTenant || getCurrentTenant();
+                      const tenantId = getCurrentTenant();
                       const entry = { id, ...newAttendance, tenant_id: tenantId };
                       addAttendanceLogToFirestore(entry).then(fid => {
                         if (fid) {
