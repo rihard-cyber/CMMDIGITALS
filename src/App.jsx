@@ -1113,10 +1113,14 @@ export default function App() {
     const tId = getCurrentTenant();
     if (!tId) return; // Belum ada tenant aktif, jangan filter
 
+    // Supabase mengembalikan camelCase (tenantId), data lokal snake_case (tenant_id).
+    // Dukung keduanya agar tidak ada data tenant lain yang lolos.
+    const tenantOf = (item) => item?.tenant_id || item?.tenantId || null;
+
     // Filter users: hanya user dengan tenant_id yang sama, atau user tanpa tenant (sistem)
     setUsers(prev => {
       if (!Array.isArray(prev)) return prev;
-      const filtered = prev.filter(u => !u.tenant_id || u.tenant_id === tId);
+      const filtered = prev.filter(u => !tenantOf(u) || tenantOf(u) === tId);
       // Pastikan superadmin tetap ada
       const hasSuperAdmin = filtered.some(u => SYSTEM_NRPS.has(u.nrp));
       if (!hasSuperAdmin) {
@@ -1129,44 +1133,44 @@ export default function App() {
     // Filter areas: hanya area dengan tenant_id yang sama
     setAreas(prev => {
       if (!Array.isArray(prev)) return prev;
-      const filtered = prev.filter(a => !a.tenant_id || a.tenant_id === tId);
+      const filtered = prev.filter(a => !tenantOf(a) || tenantOf(a) === tId);
       return filtered;
     });
 
     // Filter reports
     setReports(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(r => !r.tenant_id || r.tenant_id === tId);
+      return prev.filter(r => !tenantOf(r) || tenantOf(r) === tId);
     });
 
     // Filter findings
     setFindings(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(f => !f.tenant_id || f.tenant_id === tId);
+      return prev.filter(f => !tenantOf(f) || tenantOf(f) === tId);
     });
 
     // Filter found items
     setFoundItems(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(f => !f.tenant_id || f.tenant_id === tId);
+      return prev.filter(f => !tenantOf(f) || tenantOf(f) === tId);
     });
 
     // Filter mutasi logs
     setMutasiLogs(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(m => !m.tenant_id || m.tenant_id === tId);
+      return prev.filter(m => !tenantOf(m) || tenantOf(m) === tId);
     });
 
     // Filter attendance logs
     setAttendanceLogs(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(a => !a.tenant_id || a.tenant_id === tId);
+      return prev.filter(a => !tenantOf(a) || tenantOf(a) === tId);
     });
 
     // Filter complaints
     setComplaints(prev => {
       if (!Array.isArray(prev)) return prev;
-      return prev.filter(c => !c.tenant_id || c.tenant_id === tId);
+      return prev.filter(c => !tenantOf(c) || tenantOf(c) === tId);
     });
 
   }, [currentTenant]);

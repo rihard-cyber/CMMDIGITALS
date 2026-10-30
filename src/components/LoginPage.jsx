@@ -133,11 +133,23 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
     setLoadingTenants(true);
     const unsub = subscribeTenants((data) => {
       setLoadingTenants(false);
-      if (data && Array.isArray(data)) {
-        setTenants(data);
-      } else {
+      if (!data || !Array.isArray(data)) {
         setTenants([]);
+        return;
       }
+
+      // Admin Super = pengelola PT. CMM, boleh memilih semua lokasi.
+      // Anggota/role lain hanya boleh masuk ke tenant tempat ia terdaftar.
+      const userTenantId = authedUser?.tenantId || authedUser?.tenant_id || null;
+      const isOwner = authedUser?.jabatan === 'Admin Super';
+      const allowed = isOwner
+        ? data
+        : data.filter((t) => t.id === userTenantId);
+
+      setTenants(allowed);
+      // Jika hanya ada satu lokasi, langsung pilih agar tidak salah pilih
+      if (allowed.length === 1) setSelectedTenant(allowed[0]);
+      else setSelectedTenant(null);
     }, { limit: 100 });
     return () => unsub();
   }, [tenantStep, authedUser]);
@@ -392,7 +404,8 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
 
             {!loadingTenants && tenants.length === 0 && (
               <div style={{ textAlign: 'center', padding: '1rem', color: '#ef4444', fontSize: '0.85rem' }}>
-                Tidak ada lokasi tersedia untuk akun ini.
+                Akun ini belum terhubung ke lokasi tenant mana pun.<br />
+                Hubungi Admin PT. CMM untuk didaftarkan.
               </div>
             )}
 

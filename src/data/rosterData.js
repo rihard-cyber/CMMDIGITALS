@@ -1,13 +1,21 @@
 // ─── Roster Data Engine ─────────────────────────────────────────────────────
 // Menyimpan jadwal bulanan individu (bukan per regu).
-// Format key localStorage: cmdigital_roster_YYYY-MM
+// Format key localStorage: cmdigital_roster_<tenantId>_YYYY-MM
 // Format data: { [userId]: { [date: 'YYYY-MM-DD']: shiftCode } }
 //
-// Cloud sync: otomatis sync ke Firebase Firestore (collection 'rosters')
+// Cloud sync: otomatis sync ke Supabase (tabel 'rosters')
 // saat user menyimpan, dan fallback baca dari cloud saat init.
-import { saveRosterToFirestore, loadRosterFromFirestore } from '../utils/supabase';
+import { saveRosterToFirestore, loadRosterFromFirestore, getCurrentTenant } from '../utils/supabase';
 
 const LS_KEY_PREFIX = 'cmdigital_roster_';
+
+// Key roster harus per tenant, agar dua lokasi di perangkat yang sama tidak saling timpa.
+function rosterKey(yearMonth) {
+  const tenantId = getCurrentTenant();
+  return tenantId
+    ? `${LS_KEY_PREFIX}${tenantId}_${yearMonth}`
+    : `${LS_KEY_PREFIX}${yearMonth}`;
+}
 
 // ── Definisi semua kode shift yang valid ──────────────────────────────────────
 export const SHIFT_CODES = {
@@ -26,7 +34,16 @@ export const SHIFT_CODES = {
 // returns { [userId]: { [dateStr]: shiftCode } }
 export function getRoster(yearMonth) {
   try {
-    const saved = localStorage.getItem(LS_KEY_PREFIX + yearMonth);
+    const key = rosterKey(yearMonth);
+    let saved = localStorage.getItem(key);
+    // Migrasi data lama (key global) ke key per-tenant sekali saja
+    if (!saved) {
+      const legacy = localStorage.getItem(LS_KEY_PREFIX + yearMonth);
+      if (legacy && key !== LS_KEY_PREFIX + yearMonth) {
+        localStorage.setItem(key, legacy);
+        saved = legacy;
+      }
+    }
     if (!saved) return {};
     return JSON.parse(saved);
   } catch {
@@ -37,7 +54,7 @@ export function getRoster(yearMonth) {
 // ── Simpan roster untuk bulan tertentu ───────────────────────────────────────
 export function saveRoster(yearMonth, data) {
   try {
-    localStorage.setItem(LS_KEY_PREFIX + yearMonth, JSON.stringify(data));
+    localStorage.setItem(rosterKey(yearMonth), JSON.stringify(data));
     return true;
   } catch {
     return false;

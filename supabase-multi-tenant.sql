@@ -65,6 +65,11 @@ CREATE INDEX IF NOT EXISTS idx_pos_list_tenant_id         ON pos_list(tenant_id)
 CREATE INDEX IF NOT EXISTS idx_rosters_tenant_id          ON rosters(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_config_tenant_id           ON config(tenant_id);
 
+-- Roster: satu jadwal per bulan PER TENANT (bukan global)
+ALTER TABLE rosters DROP CONSTRAINT IF EXISTS rosters_year_month_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rosters_year_month_tenant
+  ON rosters(year_month, tenant_id);
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. FUNGSI HELPER: set_app_tenant (untuk mengatur konteks tenant per sesi)
 --    Frontend memanggil fungsi ini setelah user pilih tenant di layar login.

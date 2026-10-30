@@ -200,10 +200,10 @@ CREATE TABLE IF NOT EXISTS pos_list (
 
 CREATE INDEX IF NOT EXISTS idx_pos_list_id ON pos_list(id);
 
--- ── Rosters (single doc per month) ────────────
+-- ── Rosters (satu dokumen per bulan per tenant) ────────────
 CREATE TABLE IF NOT EXISTS rosters (
   supabase_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  year_month TEXT UNIQUE,
+  year_month TEXT,
   roster_data JSONB,
   updated_by TEXT,
   created_at TEXT,

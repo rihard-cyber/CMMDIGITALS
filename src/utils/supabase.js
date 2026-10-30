@@ -409,14 +409,21 @@ export const saveRosterToFirestore = async (yearMonth, rosterData, userId) => {
   if (!client) return false;
   try {
     const tenantId = getCurrentTenant();
+    // Roster wajib terikat ke tenant aktif (satu roster per bulan per lokasi)
+    if (!tenantId) {
+      console.warn('[Supabase] Roster tidak disimpan: tenant aktif belum dipilih');
+      return false;
+    }
     const upsertData = {
       year_month: yearMonth,
       roster_data: rosterData,
       updated_by: userId || 'unknown',
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      tenant_id: tenantId
     };
-    if (tenantId) upsertData.tenant_id = tenantId;
-    const { error } = await client.from('rosters').upsert(upsertData, { onConflict: 'year_month' });
+    const { error } = await client
+      .from('rosters')
+      .upsert(upsertData, { onConflict: 'year_month,tenant_id' });
     if (error) throw error;
     return true;
   } catch (e) {
@@ -430,8 +437,10 @@ export const loadRosterFromFirestore = async (yearMonth) => {
   if (!client) return null;
   try {
     const tenantId = getCurrentTenant();
-    let query = client.from('rosters').select('*').eq('year_month', yearMonth);
-    if (tenantId) query = query.eq('tenant_id', tenantId);
+    if (!tenantId) return null;
+    let query = client.from('rosters').select('*')
+      .eq('year_month', yearMonth)
+      .eq('tenant_id', tenantId);
     const { data, error } = await query.maybeSingle();
     if (error) throw error;
     return data?.roster_data || null;
@@ -450,8 +459,10 @@ export const subscribeRoster = (yearMonth, callback) => {
   const fetchRoster = async () => {
     if (unsubscribed) return;
     const tenantId = getCurrentTenant();
-    let query = client.from('rosters').select('*').eq('year_month', yearMonth);
-    if (tenantId) query = query.eq('tenant_id', tenantId);
+    if (!tenantId) { callback(null); return; }
+    let query = client.from('rosters').select('*')
+      .eq('year_month', yearMonth)
+      .eq('tenant_id', tenantId);
     const { data, error } = await query.maybeSingle();
     if (error) { callback(null); return; }
     callback(data?.roster_data || null);
