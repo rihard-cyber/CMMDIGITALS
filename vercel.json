@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "outputDirectory": "docs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

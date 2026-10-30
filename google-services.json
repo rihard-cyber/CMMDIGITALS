@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "101515885137",
+    "project_id": "app-smpjdc",
+    "storage_bucket": "app-smpjdc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:101515885137:android:66ae800d17c53cbe221670",
+        "android_client_info": {
+          "package_name": "com.jdc.sapujagat.patrol"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6OHLQC6qaRCjcmt99_Lk5tPnSrGswNmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

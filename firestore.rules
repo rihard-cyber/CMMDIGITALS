@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // SECURE RULES - Require Firebase Authentication
+    // Note: This app currently uses local PIN auth + Supabase as primary DB.
+    // Firestore is configured but may be legacy. 
+    // For production, either:
+    // 1. Integrate Firebase Auth (Anonymous/Custom) for Firestore access
+    // 2. Enable Firebase App Check (reCAPTCHA Enterprise) 
+    // 3. Or remove Firestore dependency entirely (use Supabase only)
+    //
+    // Current: Deny all unauthenticated access. Update when auth is integrated.
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated();
+    }
+    
+    match /patrol_reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isOwner(resource.data.user_id) || isAdmin());
+      allow create: if isAuthenticated();
+    }
+    
+    match /findings/{findingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isOwner(resource.data.pelapor) || isAdmin());
+      allow create: if isAuthenticated();
+    }
+    
+    match /found_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isOwner(resource.data.nama_penemu) || isAdmin());
+      allow create: if isAuthenticated();
+    }
+    
+    match /attendance_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+      allow create: if isAuthenticated() && isAdmin();
+    }
+    
+    match /mutasi_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && (isOwner(resource.data.petugas) || isAdmin());
+      allow create: if isAuthenticated();
+    }
+    
+    match /complaints/{complaintId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+      allow create: if true; // Public complaint form access
+    }
+    
+    match /areas/{areaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    match /pos_list/{posId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    match /rosters/{rosterId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    match /config/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+    
+    // Admin check - customize based on your auth claims
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.admin == true;
+    }
+  }
+}
