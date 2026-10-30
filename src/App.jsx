@@ -2649,6 +2649,8 @@ export default function App() {
     clearCurrentTenant();
     setShowSplash(false);
     addToast('Anda telah logout', 'info');
+    // Muat ulang penuh agar daftar user semua tenant kembali segar untuk login berikutnya
+    setTimeout(() => window.location.reload(), 150);
   };
 
   const handleNavClick = (tabName) => {
