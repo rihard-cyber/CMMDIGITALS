@@ -196,6 +196,46 @@ CREATE TABLE IF NOT EXISTS pos_list (
 
 CREATE INDEX IF NOT EXISTS idx_pos_list_id ON pos_list(id);
 
+-- ── Found Items / Penemuan Barang (Lost & Found) ────────────
+-- Kolom tenant_id ditambahkan oleh supabase-multi-tenant.sql, lalu
+-- diwajibkan + diberi foreign key oleh supabase-release-hardening.sql.
+CREATE TABLE IF NOT EXISTS found_items (
+  supabase_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id TEXT UNIQUE,
+  item_code TEXT,
+  tanggal_penemuan TEXT,
+  jam_penemuan TEXT,
+  tanggal_laporan TEXT,
+  nama_barang TEXT,
+  jenis_barang TEXT,
+  kategori_barang TEXT,
+  lokasi_penemuan TEXT,
+  nama_penemu TEXT,
+  kategori_penemu TEXT,
+  kontak_penemu TEXT,
+  keterangan_penemu TEXT,
+  foto_barang TEXT,
+  photos JSONB,
+  status TEXT DEFAULT 'Ditemukan',
+  nama_pengambil TEXT,
+  kontak_pengambil TEXT,
+  no_identitas_pengambil TEXT,
+  foto_identitas TEXT,
+  diserahkan_oleh TEXT,
+  tanggal_pengambilan TEXT,
+  catatan_serah_terima TEXT,
+  keterangan TEXT,
+  created_at TEXT,
+  firebase_saved_at TEXT,
+  updated_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_found_items_id ON found_items(id);
+CREATE INDEX IF NOT EXISTS idx_found_items_item_code ON found_items(item_code);
+CREATE INDEX IF NOT EXISTS idx_found_items_tanggal ON found_items(tanggal_penemuan);
+CREATE INDEX IF NOT EXISTS idx_found_items_status ON found_items(status);
+CREATE INDEX IF NOT EXISTS idx_found_items_created_at ON found_items(created_at);
+
 -- ── Rosters (satu dokumen per bulan per tenant) ────────────
 CREATE TABLE IF NOT EXISTS rosters (
   supabase_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -218,17 +258,27 @@ CREATE TABLE IF NOT EXISTS config (
 
 CREATE INDEX IF NOT EXISTS idx_config_key ON config(key);
 
--- ── Enable Realtime for all tables ──────────
-ALTER PUBLICATION supabase_realtime ADD TABLE users;
-ALTER PUBLICATION supabase_realtime ADD TABLE patrol_reports;
-ALTER PUBLICATION supabase_realtime ADD TABLE findings;
-ALTER PUBLICATION supabase_realtime ADD TABLE attendance_logs;
-ALTER PUBLICATION supabase_realtime ADD TABLE mutasi_logs;
-ALTER PUBLICATION supabase_realtime ADD TABLE complaints;
-ALTER PUBLICATION supabase_realtime ADD TABLE areas;
-ALTER PUBLICATION supabase_realtime ADD TABLE pos_list;
-ALTER PUBLICATION supabase_realtime ADD TABLE rosters;
-ALTER PUBLICATION supabase_realtime ADD TABLE config;
+-- ── Enable Realtime for all tables (idempotent) ──────────
+DO $$
+DECLARE
+  t TEXT;
+BEGIN
+  FOREACH t IN ARRAY ARRAY[
+    'users','patrol_reports','findings','attendance_logs','mutasi_logs',
+    'complaints','areas','pos_list','found_items','rosters','config'
+  ]
+  LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_publication_tables
+      WHERE pubname = 'supabase_realtime'
+        AND schemaname = 'public'
+        AND tablename = t
+    ) THEN
+      EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+    END IF;
+  END LOOP;
+END $$;
+
 
 -- ============================================
 -- MIGRATION: Jalankan ini jika tabel sudah ADA

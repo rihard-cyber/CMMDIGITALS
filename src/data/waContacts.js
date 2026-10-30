@@ -1,8 +1,15 @@
 // ─── Shared WA Contacts Config ─────────────────────────────────────────────
-// Nomor telepon disimpan di localStorage agar bisa diubah oleh Admin tanpa
-// perlu rebuild aplikasi. Format nomor: kode negara tanpa + (cth: 6281234567890)
+// Nomor telepon disimpan per tenant di localStorage agar setiap lokasi punya
+// kontak WhatsApp sendiri. Format nomor: kode negara tanpa + (cth: 6281234567890)
+
+import { getCurrentTenant } from '../utils/supabase';
 
 const LS_KEY = 'cmdigital_wa_contacts';
+
+function storageKey() {
+  const tenantId = getCurrentTenant();
+  return tenantId ? `${LS_KEY}_${tenantId}` : LS_KEY;
+}
 
 export const WA_DEFAULTS = {
   Teknisi: {
@@ -28,7 +35,16 @@ export const WA_DEFAULTS = {
 /** Baca kontak dari localStorage, fallback ke default */
 export function getWAContacts() {
   try {
-    const saved = localStorage.getItem(LS_KEY);
+    const key = storageKey();
+    let saved = localStorage.getItem(key);
+    // Migrasi sekali dari key global lama ke key per tenant
+    if (!saved && key !== LS_KEY) {
+      const legacy = localStorage.getItem(LS_KEY);
+      if (legacy) {
+        localStorage.setItem(key, legacy);
+        saved = legacy;
+      }
+    }
     if (!saved) return { ...WA_DEFAULTS };
     const parsed = JSON.parse(saved);
     // Merge: pastikan semua key ada
@@ -42,9 +58,9 @@ export function getWAContacts() {
   }
 }
 
-/** Simpan perubahan nomor/nama ke localStorage */
+/** Simpan perubahan nomor/nama ke localStorage (per tenant) */
 export function saveWAContacts(contacts) {
-  localStorage.setItem(LS_KEY, JSON.stringify(contacts));
+  localStorage.setItem(storageKey(), JSON.stringify(contacts));
 }
 
 /**

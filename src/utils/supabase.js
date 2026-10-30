@@ -62,7 +62,11 @@ function normalizeDoc(doc) {
   const { supabase_id, ...rest } = doc;
   const result = { supabaseId: supabase_id, firebaseId: supabase_id };
   for (const [key, value] of Object.entries(rest)) {
-    result[toCamel(key)] = normalizeDoc(value);
+    const normalized = normalizeDoc(value);
+    result[toCamel(key)] = normalized;
+    // Pertahankan juga nama kolom asli (snake_case) agar komponen lama
+    // yang membaca field seperti item_code/nama_barang tetap kompatibel.
+    if (key.includes('_')) result[key] = normalized;
   }
   return result;
 }
@@ -157,19 +161,25 @@ const createAdder = (tableName) => async (data) => {
   // Jika gagal karena constraint tidak ada, fallback ke insert biasa
   try {
     if (dbData.id) {
-      // Cek apakah record dengan id ini sudah ada
-      const { data: existing } = await client
+      // Cek apakah record dengan id ini sudah ada DI TENANT YANG SAMA.
+      // Filter tenant mencegah update tidak sengaja menimpa data tenant lain
+      // saat id kebetulan sama.
+      const tenantId = tableName !== 'tenants' ? getCurrentTenant() : null;
+      let existingQuery = client
         .from(tableName)
         .select('supabase_id')
-        .eq('id', dbData.id)
-        .maybeSingle();
+        .eq('id', dbData.id);
+      if (tenantId) existingQuery = existingQuery.eq('tenant_id', tenantId);
+      const { data: existing } = await existingQuery.maybeSingle();
 
       if (existing) {
         // Update record yang sudah ada
-        const { data: updated, error: updateErr } = await client
+        let updateQuery = client
           .from(tableName)
           .update(dbData)
-          .eq('id', dbData.id)
+          .eq('id', dbData.id);
+        if (tenantId) updateQuery = updateQuery.eq('tenant_id', tenantId);
+        const { data: updated, error: updateErr } = await updateQuery
           .select('supabase_id')
           .single();
         if (updateErr) throw updateErr;
@@ -270,6 +280,25 @@ export const addComplaintToFirestore = createAdder('complaints');
 export const updateComplaintInFirestore = createUpdater('complaints');
 export const deleteComplaintFromFirestore = createDeleter('complaints');
 export const loadAllComplaintsFromFirestore = createLoader('complaints');
+
+// Cek status tiket dari perangkat mana pun (form publik)
+export const loadComplaintByTicket = async (ticketId) => {
+  const client = initSupabase();
+  if (!client || !ticketId) return null;
+  try {
+    const { data, error } = await client
+      .from('complaints')
+      .select('*')
+      .eq('ticket_id', String(ticketId).trim().toUpperCase())
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? normalizeDoc(data) : null;
+  } catch (e) {
+    console.warn('[Supabase] Gagal cek tiket komplain:', e);
+    return null;
+  }
+};
 
 // ─── Found Items (Penemuan Barang / Lost & Found) ───
 export const subscribeFoundItems = (callback, opts = {}) =>
@@ -388,13 +417,19 @@ export const saveWAContactsToFirestore = async (contacts) => {
   if (!client) return false;
   try {
     const tenantId = getCurrentTenant();
+    if (!tenantId) {
+      console.warn('[Supabase] WA contacts tidak disimpan: tenant aktif belum dipilih');
+      return false;
+    }
     const upsertData = {
       key: 'wa_contacts',
       data: contacts,
+      tenant_id: tenantId,
       updated_at: new Date().toISOString()
     };
-    if (tenantId) upsertData.tenant_id = tenantId;
-    const { error } = await client.from('config').upsert(upsertData, { onConflict: 'key' });
+    const { error } = await client
+      .from('config')
+      .upsert(upsertData, { onConflict: 'key,tenant_id' });
     if (error) throw error;
     return true;
   } catch (e) {

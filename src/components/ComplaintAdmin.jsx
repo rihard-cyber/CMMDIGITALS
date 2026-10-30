@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, CheckCircle, AlertTriangle, Clock, Filter, Search, Send, Phone, Building, MapPin, User, FileText, X, ChevronRight, QrCode, Copy, Download, Printer } from 'lucide-react';
 import { exportTableToPdf, formatDateForFile, formatDateTimeId, getFirstPhoto } from '../utils/exportPdf';
 import ComplaintPosterModal from './ComplaintPosterModal';
+import { getCurrentTenant } from '../utils/supabase';
 import { registerBackHandler } from '../utils/navigation';
 
 const DEPARTMENTS = ['Teknisi', 'Cleaning', 'Keamanan', 'Manajemen'];
@@ -55,7 +56,11 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
     return unregister;
   }, [detail, showQR, showPosterModal]);
 
-  const complaintUrl = customBaseUrl + (customBaseUrl.includes('?') ? '&' : '?') + 'complaint';
+  const tenantId = getCurrentTenant();
+  const complaintUrl = customBaseUrl +
+    (customBaseUrl.includes('?') ? '&' : '?') +
+    'complaint' +
+    (tenantId ? `&tenant=${encodeURIComponent(tenantId)}` : '');
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(complaintUrl)}`;
   const isUrlLocalhost = customBaseUrl.includes('localhost') || customBaseUrl.includes('127.0.0.1') || customBaseUrl.includes('::1');
 

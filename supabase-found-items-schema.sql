@@ -1,13 +1,16 @@
 -- ============================================
--- SMPJDC - Found Items (Lost & Found) Table Schema
--- Run this in Supabase Dashboard → SQL Editor
+-- CMMDIGITAL - Found Items (Lost & Found) Table Schema
+-- Jalankan SETELAH tenants tersedia (supabase-multi-tenant.sql).
+-- Untuk database produksi yang sudah berjalan, cara termudah:
+--   jalankan supabase-release-hardening.sql (sudah termasuk tabel ini).
+-- File ini berguna untuk membuat/memperbaiki tabel found_items saja.
 -- ============================================
 
 -- ── Found Items / Penemuan Barang (Lost & Found) ─────────────────────────
 CREATE TABLE IF NOT EXISTS found_items (
   supabase_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   id TEXT UNIQUE,
-  item_code TEXT UNIQUE,                    -- Kode barang (auto-generate: FND-YYYYMMDD-XXX)
+  item_code TEXT,                           -- Kode barang (auto-generate: FND-YYYYMMDD-XXX)
   tanggal_penemuan TEXT,                    -- Tanggal ditemukan (YYYY-MM-DD)
   jam_penemuan TEXT,                        -- Jam ditemukan (HH:MM)
   tanggal_laporan TEXT,                     -- Tanggal dilaporkan (YYYY-MM-DD)
@@ -32,16 +35,40 @@ CREATE TABLE IF NOT EXISTS found_items (
   keterangan TEXT,                          -- Keterangan tambahan
   created_at TEXT,                          -- Timestamp created
   firebase_saved_at TEXT,                   -- Timestamp saved to Firebase/Supabase
-  updated_at TEXT                           -- Timestamp last update
+  updated_at TEXT,                          -- Timestamp last update
+  tenant_id TEXT NOT NULL                   -- Lokasi/gedung pemilik data
 );
+
+-- Untuk instalasi lama yang tabelnya sudah ada tetapi belum punya tenant_id
+ALTER TABLE found_items ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+
+-- Kode barang unik per tenant (bukan global)
+ALTER TABLE found_items DROP CONSTRAINT IF EXISTS found_items_item_code_key;
+DROP INDEX IF EXISTS idx_found_items_item_code;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_found_items_code_tenant
+  ON found_items(item_code, tenant_id);
 
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_found_items_id ON found_items(id);
-CREATE INDEX IF NOT EXISTS idx_found_items_item_code ON found_items(item_code);
-CREATE INDEX IF NOT EXISTS idx_found_items_tanggal_penemuan ON found_items(tanggal_penemuan);
+CREATE INDEX IF NOT EXISTS idx_found_items_tanggal ON found_items(tanggal_penemuan);
 CREATE INDEX IF NOT EXISTS idx_found_items_status ON found_items(status);
 CREATE INDEX IF NOT EXISTS idx_found_items_created_at ON found_items(created_at);
-CREATE INDEX IF NOT EXISTS idx_found_items_nama_barang ON found_items(nama_barang);
+CREATE INDEX IF NOT EXISTS idx_found_items_tenant_id ON found_items(tenant_id);
+
+-- Foreign key tenant (ON DELETE RESTRICT: tenant dengan data tidak boleh dihapus)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_found_items_tenant'
+      AND conrelid = 'public.found_items'::regclass
+  ) THEN
+    ALTER TABLE public.found_items
+      ADD CONSTRAINT fk_found_items_tenant
+      FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE RESTRICT;
+  END IF;
+END $$;
+
 
 -- Enable Realtime
 DO $$

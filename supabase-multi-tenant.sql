@@ -1,7 +1,11 @@
 -- ============================================================================
 -- SMPJDC / CMMDIGITAL MULTI-TENANT MIGRATION
 -- Jalankan SQL ini di Supabase SQL Editor (Project BARU untuk multi-tenant)
--- URUTAN: Jalankan supabase-schema.sql DULU, baru jalankan file ini.
+-- URUTAN WAJIB:
+--   1. supabase-schema.sql
+--   2. supabase-multi-tenant.sql   (file ini)
+--   3. supabase-release-hardening.sql
+-- Untuk database yang SUDAH berjalan, cukup jalankan file 3 (aman diulang).
 -- ============================================================================
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +54,7 @@ ALTER TABLE mutasi_logs      ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE complaints       ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE areas            ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE pos_list         ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE found_items      ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE rosters          ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 ALTER TABLE config           ADD COLUMN IF NOT EXISTS tenant_id TEXT;
 
@@ -62,6 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_mutasi_logs_tenant_id      ON mutasi_logs(tenant_
 CREATE INDEX IF NOT EXISTS idx_complaints_tenant_id       ON complaints(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_areas_tenant_id            ON areas(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_pos_list_tenant_id         ON pos_list(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_found_items_tenant_id      ON found_items(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_rosters_tenant_id          ON rosters(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_config_tenant_id           ON config(tenant_id);
 
@@ -69,6 +75,16 @@ CREATE INDEX IF NOT EXISTS idx_config_tenant_id           ON config(tenant_id);
 ALTER TABLE rosters DROP CONSTRAINT IF EXISTS rosters_year_month_key;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_rosters_year_month_tenant
   ON rosters(year_month, tenant_id);
+
+-- Config: key hanya unik di dalam satu tenant (WA contacts per lokasi)
+ALTER TABLE config DROP CONSTRAINT IF EXISTS config_key_key;
+DROP INDEX IF EXISTS config_key_key;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_config_key_tenant
+  ON config(key, tenant_id);
+
+-- Found items: kode barang unik per tenant, bukan global
+CREATE UNIQUE INDEX IF NOT EXISTS idx_found_items_code_tenant
+  ON found_items(item_code, tenant_id);
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- 3. FUNGSI HELPER: set_app_tenant (untuk mengatur konteks tenant per sesi)
@@ -95,6 +111,7 @@ ALTER TABLE mutasi_logs        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE complaints         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE areas              ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pos_list           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE found_items        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rosters            ENABLE ROW LEVEL SECURITY;
 ALTER TABLE config             ENABLE ROW LEVEL SECURITY;
 
@@ -107,6 +124,7 @@ DROP POLICY IF EXISTS "Allow all for anon mutasi_logs" ON mutasi_logs;
 DROP POLICY IF EXISTS "Allow all for anon complaints" ON complaints;
 DROP POLICY IF EXISTS "Allow all for anon areas" ON areas;
 DROP POLICY IF EXISTS "Allow all for anon pos_list" ON pos_list;
+DROP POLICY IF EXISTS "Allow all for anon found_items" ON found_items;
 DROP POLICY IF EXISTS "Allow all for anon rosters" ON rosters;
 DROP POLICY IF EXISTS "Allow all for anon config" ON config;
 DROP POLICY IF EXISTS "Allow all for anon tenants" ON tenants;
@@ -119,6 +137,7 @@ DROP POLICY IF EXISTS "Tenant isolation mutasi_logs" ON mutasi_logs;
 DROP POLICY IF EXISTS "Tenant isolation complaints" ON complaints;
 DROP POLICY IF EXISTS "Tenant isolation areas" ON areas;
 DROP POLICY IF EXISTS "Tenant isolation pos_list" ON pos_list;
+DROP POLICY IF EXISTS "Tenant isolation found_items" ON found_items;
 DROP POLICY IF EXISTS "Tenant isolation rosters" ON rosters;
 DROP POLICY IF EXISTS "Tenant isolation config" ON config;
 
@@ -153,6 +172,9 @@ CREATE POLICY "Allow all for anon areas" ON areas
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow all for anon pos_list" ON pos_list
+  FOR ALL TO anon USING (true) WITH CHECK (true);
+
+CREATE POLICY "Allow all for anon found_items" ON found_items
   FOR ALL TO anon USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow all for anon rosters" ON rosters
@@ -259,6 +281,16 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'found_items'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE found_items;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
     WHERE pubname = 'supabase_realtime' AND tablename = 'rosters'
   ) THEN
     ALTER PUBLICATION supabase_realtime ADD TABLE rosters;
@@ -276,7 +308,32 @@ BEGIN
 END $$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 6. VERIFIKASI (hilangkan tanda -- di awal baris untuk mencoba)
+-- 6. GRANT UNTUK ANON/AUTHENTICATED (Supabase Cloud)
+-- ─────────────────────────────────────────────────────────────────────────────
+GRANT ALL ON TABLE public.tenants TO anon, authenticated;
+GRANT ALL ON TABLE public.users TO anon, authenticated;
+GRANT ALL ON TABLE public.patrol_reports TO anon, authenticated;
+GRANT ALL ON TABLE public.findings TO anon, authenticated;
+GRANT ALL ON TABLE public.attendance_logs TO anon, authenticated;
+GRANT ALL ON TABLE public.mutasi_logs TO anon, authenticated;
+GRANT ALL ON TABLE public.complaints TO anon, authenticated;
+GRANT ALL ON TABLE public.areas TO anon, authenticated;
+GRANT ALL ON TABLE public.pos_list TO anon, authenticated;
+GRANT ALL ON TABLE public.found_items TO anon, authenticated;
+GRANT ALL ON TABLE public.rosters TO anon, authenticated;
+GRANT ALL ON TABLE public.config TO anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 7. LANGKAH BERIKUTNYA
+--    Jalankan supabase-release-hardening.sql untuk:
+--    - backfill tenant_id data lama,
+--    - NOT NULL + foreign key ON DELETE RESTRICT,
+--    - unique NRP,
+--    - seed POS awal PT. CMM.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 8. VERIFIKASI (hilangkan tanda -- di awal baris untuk mencoba)
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SELECT * FROM tenants;
 -- SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';

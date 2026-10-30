@@ -13,6 +13,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Camera, User, Building, MapPin, FileText, AlertTriangle, CheckCircle, X, QrCode, ChevronRight, MessageSquare } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { registerBackHandler } from '../utils/navigation';
+import { subscribeTenants, loadComplaintByTicket } from '../utils/supabase';
 
 const CATEGORIES = [
   { id: 'Fasilitas', label: 'Fasilitas', icon: Building, color: '#3b82f6' },
@@ -38,6 +39,9 @@ export default function ComplaintForm({ onAddComplaint }) {
   const [floor, setFloor] = useState('');
   const [location, setLocation] = useState('');
   const [tenant, setTenant] = useState('');
+  const [tenantId, setTenantId] = useState('');
+  const [tenants, setTenants] = useState([]);
+  const [loadingTenants, setLoadingTenants] = useState(true);
   const [category, setCategory] = useState('');
   const [categoryCustom, setCategoryCustom] = useState('');
   const [description, setDescription] = useState('');
@@ -48,6 +52,7 @@ export default function ComplaintForm({ onAddComplaint }) {
   const [trackMode, setTrackMode] = useState(false);
   const [trackId, setTrackId] = useState('');
   const [trackData, setTrackData] = useState(null);
+  const [trackLoading, setTrackLoading] = useState(false);
 
   // Ref ke hidden file input untuk kamera Android
   const photoInputRef = useRef(null);
@@ -116,6 +121,28 @@ export default function ComplaintForm({ onAddComplaint }) {
     };
   }, [step]);
 
+  // Muat daftar lokasi/gedung terdaftar. QR poster bisa membawa ?tenant=tnt_xxx.
+  useEffect(() => {
+    setLoadingTenants(true);
+    const urlTenant = typeof window !== 'undefined'
+      ? (new URLSearchParams(window.location.search).get('tenant') || '')
+      : '';
+    let unsubscribe = null;
+    unsubscribe = subscribeTenants((data) => {
+      const list = Array.isArray(data) ? data : [];
+      setTenants(list);
+      setLoadingTenants(false);
+      if (urlTenant) {
+        const match = list.find(t => t.id === urlTenant || t.slug === urlTenant);
+        if (match) {
+          setTenantId(match.id);
+          setErrors(p => ({ ...p, tenantId: '' }));
+        }
+      }
+    }, { limit: 100 });
+    return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
+  }, []);
+
   // Handle back button to go back from track mode to main form
   useEffect(() => {
     const unregister = registerBackHandler(() => {
@@ -156,17 +183,21 @@ export default function ComplaintForm({ onAddComplaint }) {
     e.preventDefault();
     const errs = {};
     if (!name.trim()) errs.name = 'Nama wajib diisi';
+    if (!tenantId) errs.tenantId = 'Pilih lokasi / gedung';
     if (!floor) errs.floor = 'Pilih lantai';
-    if (!tenant.trim()) errs.tenant = 'Nama tenant / unit wajib diisi';
     if (!category) errs.category = 'Pilih kategori pengaduan / saran';
     if (category === 'Lainnya' && !categoryCustom.trim()) errs.category = 'Tulis kategori pengaduan';
     if (!description.trim()) errs.description = category === 'Kritik & Saran' ? 'Isi kritik & saran wajib diisi' : 'Deskripsi komplain wajib diisi';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
 
-    const count = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]').length + 1;
-    const id = `CMP-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(count).padStart(3, '0')}`;
+    const dateCode = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const suffix = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2))
+      .replace(/-/g, '').slice(0, 6).toUpperCase();
+    const id = `CMP-${dateCode}-${suffix}`;
     const finalCategory = category === 'Lainnya' && categoryCustom.trim() ? categoryCustom.trim() : category;
+    const selectedTenant = tenants.find(t => t.id === tenantId);
+    const buildingName = selectedTenant?.nama || tenantId;
     const complaint = {
       id: `cmp-${Date.now()}`,
       ticketId: id,
@@ -174,7 +205,8 @@ export default function ComplaintForm({ onAddComplaint }) {
       phone: phone.trim(),
       floor,
       location: location.trim(),
-      tenant: tenant.trim(),
+      tenant: tenant.trim() ? `${buildingName} — ${tenant.trim()}` : buildingName,
+      tenant_id: tenantId,
       category: finalCategory,
       description: description.trim(),
       photos,
@@ -199,12 +231,24 @@ export default function ComplaintForm({ onAddComplaint }) {
     setSubmitted(true);
   };
 
-  const handleTrack = (e) => {
+  const handleTrack = async (e) => {
     e.preventDefault();
     if (!trackId.trim()) return;
-    const data = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
-    const found = data.find(c => c.ticketId === trackId.trim().toUpperCase() || c.name.toLowerCase().includes(trackId.trim().toLowerCase()));
-    setTrackData(found || 'notfound');
+    const query = trackId.trim();
+    setTrackLoading(true);
+    try {
+      const data = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
+      let found = data.find(c =>
+        String(c.ticketId || '').toUpperCase() === query.toUpperCase()
+      );
+      // Cari juga di cloud agar tiket bisa dilacak dari perangkat lain
+      if (!found) found = await loadComplaintByTicket(query);
+      setTrackData(found || 'notfound');
+    } catch {
+      setTrackData('notfound');
+    } finally {
+      setTrackLoading(false);
+    }
   };
 
   const statusColor = (s) => ({
@@ -315,16 +359,16 @@ export default function ComplaintForm({ onAddComplaint }) {
 
           <form onSubmit={handleTrack} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
             <div className="step-field">
-              <label>CARI NOMOR TIKET / NAMA</label>
-              <input type="text" value={trackId} onChange={e => setTrackId(e.target.value)} placeholder="Cth: CMP-20260605-001" className="modern-input" style={{ fontSize: '0.85rem' }} />
+              <label>CARI NOMOR TIKET</label>
+              <input type="text" value={trackId} onChange={e => setTrackId(e.target.value)} placeholder="Cth: CMP-20260605-A1B2C3" className="modern-input" style={{ fontSize: '0.85rem' }} />
             </div>
-            <button type="submit" className="btn-primary" style={{ padding: '0.6rem', fontSize: '0.8rem' }}>Cari</button>
+            <button type="submit" disabled={trackLoading} className="btn-primary" style={{ padding: '0.6rem', fontSize: '0.8rem', opacity: trackLoading ? 0.7 : 1 }}>{trackLoading ? 'Mencari...' : 'Cari'}</button>
           </form>
 
           {trackData === 'notfound' && (
             <div style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
               <AlertTriangle size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
-              <p>Tiket tidak ditemukan. Periksa kembali nomor tiket atau nama Anda.</p>
+              <p>Tiket tidak ditemukan. Periksa kembali nomor tiket Anda.</p>
             </div>
           )}
 
@@ -441,6 +485,19 @@ export default function ComplaintForm({ onAddComplaint }) {
             <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Cth: 08123456789" className="modern-input" style={{ fontSize: '0.82rem' }} />
           </div>
 
+          {/* Building / Tenant Location */}
+          <div className="step-field">
+            <label>LOKASI / GEDUNG <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+            <select value={tenantId} onChange={e => { setTenantId(e.target.value); setErrors(p => ({ ...p, tenantId: '' })); }} className="modern-select" style={{ fontSize: '0.82rem' }} disabled={loadingTenants}>
+              <option value="">{loadingTenants ? '— Memuat lokasi...' : '— Pilih Lokasi / Gedung —'}</option>
+              {tenants.map(t => <option key={t.id} value={t.id}>{t.nama}</option>)}
+            </select>
+            {!loadingTenants && tenants.length === 0 && (
+              <span style={{ fontSize: '0.65rem', color: 'var(--color-danger)' }}>Belum ada lokasi terdaftar. Hubungi Admin PT. CMM.</span>
+            )}
+            {errors.tenantId && <span style={{ fontSize: '0.65rem', color: 'var(--color-danger)' }}>{errors.tenantId}</span>}
+          </div>
+
           {/* Floor */}
           <div className="step-field">
             <label>LANTAI <span style={{ color: 'var(--color-danger)' }}>*</span></label>
@@ -461,15 +518,14 @@ export default function ComplaintForm({ onAddComplaint }) {
             </div>
           </div>
 
-          {/* Tenant */}
+          {/* Unit / Ana Sorum */}
           <div className="step-field">
-            <label>NAMA TENANT / UNIT / ANA SORUM <span style={{ color: 'var(--color-danger)' }}>*</span></label>
+            <label>NAMA UNIT / ANA SORUM <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opsional)</span></label>
             <div className="scan-input-group">
               <Building size={16} style={{ color: 'var(--text-muted)', position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-              <input type="text" value={tenant} onChange={e => { setTenant(e.target.value); setErrors(p => ({ ...p, tenant: '' })); }}
-                placeholder="Cth: PT Maju Jaya / Ana Sorum" className="modern-input" style={{ paddingLeft: '2rem', fontSize: '0.82rem' }} />
+              <input type="text" value={tenant} onChange={e => setTenant(e.target.value)}
+                placeholder="Cth: PT Maju Jaya / Ana Sorum Lt. 3" className="modern-input" style={{ paddingLeft: '2rem', fontSize: '0.82rem' }} />
             </div>
-            {errors.tenant && <span style={{ fontSize: '0.65rem', color: 'var(--color-danger)' }}>{errors.tenant}</span>}
           </div>
 
           {/* Category */}

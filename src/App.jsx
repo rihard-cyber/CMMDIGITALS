@@ -81,7 +81,7 @@ import BottomNav from './components/BottomNav';
 import ConfirmModal from './components/ConfirmModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import TenantManagement from './components/TenantManagement';
-import INITIAL_POS_LIST from './data/posList';
+import { saveWAContacts as saveWAContactsLocal } from './data/waContacts';
 
 const ManagementDashboard = lazy(() => import('./components/ManagementDashboard'));
 const SecurityPatrolApp = lazy(() => import('./components/SecurityPatrolApp'));
@@ -126,20 +126,20 @@ const INITIAL_AREAS = [
 ];
 
 const cleanAndDeduplicateAreas = (rawList) => {
-  if (!Array.isArray(rawList)) return [...INITIAL_AREAS];
+  if (!Array.isArray(rawList)) return [];
 
   const seenQr = new Set();
   const seenNum = new Set();
   const seenLoc = new Set();
   const result = [];
 
-  const tryAdd = (area) => {
+  rawList.forEach((area) => {
     if (!area) return;
     const qr = (area.qrCode || '').toUpperCase().trim();
     const num = String(area.nomorTitik || '').trim();
     const locKey = `${(area.lantai || '').toLowerCase()}|${(area.titik || '').toLowerCase()}`;
 
-    // Prevent duplicate by QR code, by numeric nomorTitik, or by exact same location on same floor
+    // Cegah duplikat berdasarkan QR, nomor titik, atau lokasi yang sama
     if (qr && seenQr.has(qr)) return;
     if (num && seenNum.has(num)) return;
     if (locKey && seenLoc.has(locKey)) return;
@@ -148,31 +148,6 @@ const cleanAndDeduplicateAreas = (rawList) => {
     if (num) seenNum.add(num);
     if (locKey) seenLoc.add(locKey);
     result.push(area);
-  };
-
-  // 1. First add INITIAL_AREAS (updating firebaseId if present in rawList)
-  INITIAL_AREAS.forEach(initArea => {
-    const qr = (initArea.qrCode || '').toUpperCase().trim();
-    const num = String(initArea.nomorTitik).trim();
-    const rawMatch = rawList.find(r =>
-      (r.qrCode && r.qrCode.toUpperCase().trim() === qr) ||
-      (r.id === initArea.id || r.id === initArea.id.replace(/^cmd-/, '')) ||
-      (String(r.nomorTitik).trim() === num && r.lantai === initArea.lantai)
-    );
-    if (rawMatch) {
-      tryAdd({
-        ...initArea,
-        firebaseId: rawMatch.firebaseId || rawMatch.supabaseId || initArea.firebaseId
-      });
-    } else {
-      tryAdd(initArea);
-    }
-  });
-
-  // 2. Add any additional custom areas that are not duplicates
-  rawList.forEach(raw => {
-    if (!raw) return;
-    tryAdd(raw);
   });
 
   return result;
@@ -978,7 +953,7 @@ export default function App() {
       localStorage.setItem(DB_VERSION_KEY, CURRENT_DB_VERSION);
       return cleaned;
     } catch (e) {
-      return [...INITIAL_AREAS];
+      return [];
     }
   });
 
@@ -986,13 +961,9 @@ export default function App() {
     try {
       const saved = localStorage.getItem('cmdigital_pos_list');
       const parsed = saved ? JSON.parse(saved) : null;
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-      localStorage.setItem('cmdigital_pos_list', JSON.stringify(INITIAL_POS_LIST));
-      return INITIAL_POS_LIST;
+      return Array.isArray(parsed) ? parsed : [];
     } catch (e) {
-      return INITIAL_POS_LIST;
+      return [];
     }
   });
 
@@ -1114,64 +1085,18 @@ export default function App() {
     if (!tId) return; // Belum ada tenant aktif, jangan filter
 
     // Supabase mengembalikan camelCase (tenantId), data lokal snake_case (tenant_id).
-    // Dukung keduanya agar tidak ada data tenant lain yang lolos.
+    // Hanya data yang benar-benar milik tenant aktif yang boleh tampil.
     const tenantOf = (item) => item?.tenant_id || item?.tenantId || null;
+    const belongsToTenant = (item) => tenantOf(item) === tId;
 
-    // Filter users: hanya user dengan tenant_id yang sama, atau user tanpa tenant (sistem)
-    setUsers(prev => {
-      if (!Array.isArray(prev)) return prev;
-      const filtered = prev.filter(u => !tenantOf(u) || tenantOf(u) === tId);
-      // Pastikan superadmin tetap ada
-      const hasSuperAdmin = filtered.some(u => SYSTEM_NRPS.has(u.nrp));
-      if (!hasSuperAdmin) {
-        const missing = BASE_USERS.find(u => SYSTEM_NRPS.has(u.nrp) && !filtered.find(x => x.nrp === u.nrp));
-        if (missing) filtered.push({ ...missing, tenant_id: tId });
-      }
-      return filtered;
-    });
-
-    // Filter areas: hanya area dengan tenant_id yang sama
-    setAreas(prev => {
-      if (!Array.isArray(prev)) return prev;
-      const filtered = prev.filter(a => !tenantOf(a) || tenantOf(a) === tId);
-      return filtered;
-    });
-
-    // Filter reports
-    setReports(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(r => !tenantOf(r) || tenantOf(r) === tId);
-    });
-
-    // Filter findings
-    setFindings(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(f => !tenantOf(f) || tenantOf(f) === tId);
-    });
-
-    // Filter found items
-    setFoundItems(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(f => !tenantOf(f) || tenantOf(f) === tId);
-    });
-
-    // Filter mutasi logs
-    setMutasiLogs(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(m => !tenantOf(m) || tenantOf(m) === tId);
-    });
-
-    // Filter attendance logs
-    setAttendanceLogs(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(a => !tenantOf(a) || tenantOf(a) === tId);
-    });
-
-    // Filter complaints
-    setComplaints(prev => {
-      if (!Array.isArray(prev)) return prev;
-      return prev.filter(c => !tenantOf(c) || tenantOf(c) === tId);
-    });
+    setUsers(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setAreas(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setReports(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setFindings(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setFoundItems(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setMutasiLogs(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setAttendanceLogs(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
+    setComplaints(prev => Array.isArray(prev) ? prev.filter(belongsToTenant) : prev);
 
   }, [currentTenant]);
 
@@ -1205,8 +1130,9 @@ export default function App() {
     }
   }, [complaints]);
 
-  // Firebase real-time subscription untuk complaints
+  // Firebase real-time subscription untuk complaints (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
 
@@ -1223,10 +1149,11 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk patrol reports
+  // Firebase real-time subscription untuk patrol reports (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeReports((firebaseData) => {
@@ -1242,10 +1169,11 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk findings
+  // Firebase real-time subscription untuk findings (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeFindings((firebaseData) => {
@@ -1261,10 +1189,11 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk found items (Lost & Found)
+  // Firebase real-time subscription untuk found items (Lost & Found, hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeFoundItems((firebaseData) => {
@@ -1280,10 +1209,11 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk attendance logs
+  // Firebase real-time subscription untuk attendance logs (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeAttendanceLogs((firebaseData) => {
@@ -1299,10 +1229,11 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk mutasi logs
+  // Firebase real-time subscription untuk mutasi logs (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeMutasiLogs((firebaseData) => {
@@ -1349,10 +1280,13 @@ export default function App() {
                     : existingById !== -1 ? existingById : -1;
 
           if (idx !== -1) {
-            // Update user yang sudah ada — preserve data lokal yang lebih baru
+            // Update user yang sudah ada — data lokal menang untuk field yang ada,
+            // kecuali tenant: data cloud adalah sumber kebenaran.
+            const cloudTenant = fbUser.tenantId || fbUser.tenant_id || null;
             merged[idx] = {
               ...fbUser,
               ...merged[idx],            // data lokal menang untuk field yang ada
+              ...(cloudTenant ? { tenantId: cloudTenant, tenant_id: cloudTenant } : {}),
               firebaseId: fbUser.firebaseId || merged[idx].firebaseId,
               lastActive: fbUser.lastActive || merged[idx].lastActive,
             };
@@ -1381,8 +1315,13 @@ export default function App() {
 
     const uploadMissing = async () => {
       if (cancelled) return;
+      const tenantId = getCurrentTenant();
+      if (!tenantId) return; // Jangan pernah upload user tanpa tenant
       const currentUsers = JSON.parse(localStorage.getItem('sapujagat_users') || '[]');
-      const missing = currentUsers.filter(u => !u.supabaseId);
+      const missing = currentUsers.filter(u =>
+        !u.supabaseId &&
+        ((u.tenant_id || u.tenantId) === tenantId)
+      );
       if (missing.length === 0) return;
 
       console.log(`[Supabase] Mengupload ${missing.length} user yang belum tersync...`);
@@ -1392,7 +1331,7 @@ export default function App() {
         if (cancelled) break;
         const u = missing[i];
         try {
-          const fid = await addUserToFirestore({ ...u, pin: undefined, shift: undefined });
+          const fid = await addUserToFirestore({ ...u, tenant_id: tenantId, pin: undefined, shift: undefined });
           if (fid && !cancelled) {
             setUsers(p => {
               const updated = p.map(x => x.id === u.id ? { ...x, supabaseId: fid, firebaseId: fid } : x);
@@ -1416,11 +1355,12 @@ export default function App() {
 
     uploadMissing();
     return () => { cancelled = true; };
-  }, [firebaseUsersLoaded]);
+  }, [firebaseUsersLoaded, currentTenant]);
 
 
-  // Firebase real-time subscription untuk areas/checkpoints
+  // Firebase real-time subscription untuk areas/checkpoints (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeAreas((firebaseData) => {
@@ -1435,7 +1375,7 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
   // Upload area lokal yang belum tersimpan ke Firestore (dengan retry otomatis)
   useEffect(() => {
@@ -1445,11 +1385,16 @@ export default function App() {
 
     const uploadMissing = () => {
       if (cancelled) return;
+      const tenantId = getCurrentTenant();
+      if (!tenantId) return;
       setAreas(prev => {
-        const missing = prev.filter(a => !a.firebaseId);
+        const missing = prev.filter(a =>
+          !a.firebaseId &&
+          ((a.tenant_id || a.tenantId) === tenantId)
+        );
         if (missing.length === 0) return prev;
         missing.forEach(a => {
-          addAreaToFirestore(a).then(fid => {
+          addAreaToFirestore({ ...a, tenant_id: tenantId }).then(fid => {
             if (fid && !cancelled) {
               setAreas(p => p.map(x => x.id === a.id ? { ...x, firebaseId: fid } : x));
             }
@@ -1462,46 +1407,41 @@ export default function App() {
 
     uploadMissing();
     return () => { cancelled = true; clearTimeout(retryTimer); };
-  }, [firebaseUsersLoaded]);
+  }, [firebaseUsersLoaded, currentTenant]);
 
-  // Firebase real-time subscription untuk pos list
+  // Firebase real-time subscription untuk pos list (hanya tenant aktif)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribePosList((firebaseData) => {
       if (!firebaseData) return;
       setPosList(prev => {
-        const initialIds = new Set(INITIAL_POS_LIST.map(p => p.id));
-        const merged = [...INITIAL_POS_LIST];
-        const fbIds = new Set();
-        firebaseData.forEach(fb => {
-          if (!initialIds.has(fb.id)) {
-            merged.push(fb);
-          }
-          fbIds.add(fb.id);
-        });
-        prev.forEach(local => {
-          if (!initialIds.has(local.id) && !fbIds.has(local.id)) {
-            merged.push(local);
-          }
+        const keyOf = (p) => `${p.tenant_id || p.tenantId || ''}|${p.id}`;
+        const merged = [...(firebaseData || [])];
+        const seen = new Set(merged.map(keyOf));
+        (prev || []).forEach(local => {
+          const k = keyOf(local);
+          if (!seen.has(k)) { merged.push(local); seen.add(k); }
         });
         return merged;
       });
     });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk WA Contacts
+  // Firebase real-time subscription untuk WA Contacts (per tenant)
   useEffect(() => {
+    if (!currentTenant) return;
     const db = initSupabase();
     if (!db) return;
     const unsub = subscribeWAContacts((firebaseData) => {
       if (!firebaseData) return;
       const { updatedAt, ...contacts } = firebaseData;
-      localStorage.setItem('cmdigital_wa_contacts', JSON.stringify(contacts));
+      saveWAContactsLocal(contacts);
     });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
   // Upload posList yang belum tersimpan ke Firestore (dengan retry otomatis)
   useEffect(() => {
@@ -1511,11 +1451,16 @@ export default function App() {
 
     const uploadMissing = () => {
       if (cancelled) return;
+      const tenantId = getCurrentTenant();
+      if (!tenantId) return;
       setPosList(prev => {
-        const missing = prev.filter(p => !p.firebaseId && !INITIAL_POS_LIST.some(init => init.id === p.id));
+        const missing = prev.filter(p =>
+          !p.firebaseId &&
+          ((p.tenant_id || p.tenantId) === tenantId)
+        );
         if (missing.length === 0) return prev;
         missing.forEach(p => {
-          addPosToFirestore(p).then(fid => {
+          addPosToFirestore({ ...p, tenant_id: tenantId }).then(fid => {
             if (fid && !cancelled) {
               setPosList(list => list.map(x => x.id === p.id ? { ...x, firebaseId: fid } : x));
             }
@@ -1528,7 +1473,7 @@ export default function App() {
 
     uploadMissing();
     return () => { cancelled = true; clearTimeout(retryTimer); };
-  }, [firebaseUsersLoaded]);
+  }, [firebaseUsersLoaded, currentTenant]);
 
   // ── Batch sync semua localStorage ke Supabase ──────────────────────────
   // Upload data lokal yang belum punya firebaseId/supabaseId ke Supabase
@@ -1536,7 +1481,10 @@ export default function App() {
   useEffect(() => {
     const db = initSupabase();
     if (!db || !firebaseUsersLoaded) return;
+    if (!authenticated || !currentTenant) return;
     let cancelled = false;
+    const tenantId = getCurrentTenant();
+    if (!tenantId) return;
 
     const SYNC_COLLECTIONS = [
       { key: 'cmdigital_complaints', adder: addComplaintToFirestore },
@@ -1554,14 +1502,17 @@ export default function App() {
         if (!raw) continue;
         let items;
         try { items = JSON.parse(raw); } catch { continue; }
-        const missing = items.filter(item => !item.supabaseId);
+        const missing = items.filter(item =>
+          !item.supabaseId &&
+          ((item.tenant_id || item.tenantId) === tenantId)
+        );
         if (missing.length === 0) continue;
 
         console.log(`[Sync] Upload ${missing.length} items from ${key}...`);
 
         for (let i = 0; i < missing.length; i++) {
           if (cancelled) break;
-          let item = { ...missing[i] };
+          let item = { ...missing[i], tenant_id: tenantId };
           try {
             // Intercept foto Base64 dan unggah ke Storage sebelum disync ke database Cloud
             if (item.foto && item.foto.startsWith('data:image')) {
@@ -1614,7 +1565,7 @@ export default function App() {
       checkOfflineQueue();
     });
     return () => { cancelled = true; };
-  }, [firebaseUsersLoaded, syncTrigger]);
+  }, [firebaseUsersLoaded, syncTrigger, currentTenant, authenticated]);
 
   // Auto-sync currentUser ketika data dari Supabase berubah
   useEffect(() => {
@@ -1976,6 +1927,11 @@ export default function App() {
 
   // ===== FOUND ITEMS (LOST & FOUND) CRUD =====
   const handleAddFoundItem = async (itemData) => {
+    const tenantId = getCurrentTenant();
+    if (!tenantId) {
+      addToast('Tenant aktif belum dipilih. Tidak dapat menyimpan barang temuan.', 'danger');
+      return;
+    }
     const id = `fnd-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const today = new Date();
     const tanggal = today.toISOString().split('T')[0];
@@ -1989,6 +1945,7 @@ export default function App() {
       jam_penemuan: jam,
       tanggal_laporan: tanggal,
       status: 'Ditemukan',
+      tenant_id: tenantId,
       created_at: today.toISOString(),
       firebase_saved_at: today.toISOString(),
       updated_at: today.toISOString(),
@@ -2227,7 +2184,12 @@ export default function App() {
   };
 
   const handleAddComplaint = async (complaint) => {
-    const tenantId = getCurrentTenant();
+    // Form publik mengirim tenant_id dari pilihan lokasi; form internal memakai tenant aktif.
+    const tenantId = complaint?.tenant_id || complaint?.tenantId || getCurrentTenant();
+    if (!tenantId) {
+      addToast('Lokasi/gedung komplain belum dipilih. Silakan pilih lokasi terlebih dahulu.', 'danger');
+      return;
+    }
     let complaintData = { ...complaint, tenant_id: tenantId };
     setComplaints(prev => {
       const updated = [complaintData, ...prev];
@@ -3036,7 +2998,7 @@ export default function App() {
         <div className="sidebar-footer">
           <div className="sidebar-footer-info">
             <Building size={14} />
-            <span>CMMDIGITAL - Gedung Pusat</span>
+            <span>{currentTenant?.tenantNama ? `CMMDIGITAL - ${currentTenant.tenantNama}` : 'CMMDIGITAL - Gedung Pusat'}</span>
           </div>
           <button onClick={toggleTheme} className="theme-toggle-btn" title={`Mode ${theme === 'dark' ? 'Terang' : 'Gelap'}`}>
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
