@@ -29,7 +29,7 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
     const origin = typeof window !== 'undefined' ? window.location.origin : '';
     const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
     if (origin.includes('localhost') || origin.includes('127.0.0.1') || origin.includes('::1') || origin.startsWith('file:')) {
-      return 'https://rihard-cyber.github.io/CMMDIGITAL/';
+      return 'https://rihard-cyber.github.io/CMMDIGITALS/';
     }
     return origin + pathname;
   });
@@ -209,14 +209,14 @@ export default function ComplaintAdmin({ complaints = [], onUpdateComplaint, onD
                     setCustomBaseUrl(val);
                     localStorage.setItem('cmdigital_custom_complaint_url', val);
                   }}
-                  placeholder="https://rihard-cyber.github.io/CMMDIGITAL/"
+                  placeholder="https://rihard-cyber.github.io/CMMDIGITALS/"
                   className="modern-input"
                   style={{ flex: 1, fontSize: '0.75rem', padding: '0.35rem 0.5rem' }}
                 />
                 <button
                   type="button"
                   onClick={() => {
-                    const defaultUrl = 'https://rihard-cyber.github.io/CMMDIGITAL/';
+                    const defaultUrl = 'https://rihard-cyber.github.io/CMMDIGITALS/';
                     setCustomBaseUrl(defaultUrl);
                     localStorage.setItem('cmdigital_custom_complaint_url', defaultUrl);
                   }}

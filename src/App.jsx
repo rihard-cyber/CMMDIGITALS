@@ -2742,7 +2742,10 @@ export default function App() {
     );
   }
 
-  if (!isSecurityPassed) {
+  // Verifikasi izin kamera/GPS hanya wajib di aplikasi Android (native).
+  // Di browser (localhost / GitHub Pages) langsung lanjut agar tidak tertahan
+  // di layar "Verifikasi Keamanan" saat izin tidak tersedia.
+  if (Capacitor.isNativePlatform() && !isSecurityPassed) {
     return <SecurityCheckBlock onPassed={(bypassed = false) => { setIsSecurityBypassed(!!bypassed); setIsSecurityPassed(true); }} theme={theme} />;
   }
 

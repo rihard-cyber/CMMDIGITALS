@@ -1,1 +1,0 @@
-import{$ as e}from"./index-BDhL-9s9.js";var t=e(`ChevronUp`,[[`path`,{d:`m18 15-6-6-6 6`,key:`153udz`}]]);export{t};
