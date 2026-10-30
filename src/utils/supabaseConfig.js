@@ -1,6 +1,6 @@
 const supabaseConfig = {
-  url: 'https://apshtzpftfzdrygicvjl.supabase.co',
-  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFwc2h0enBmdGZ6ZHJ5Z2ljdmpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEwOTU0NjQsImV4cCI6MjA5NjY3MTQ2NH0.TAlxGXkvyUbCdVBCvYmVQ5JspehVwUCrLEMWCLN3lBs'
+  url: import.meta.env.VITE_SUPABASE_URL || 'https://kjfpgtrhspvozikzttbe.supabase.co',
+  anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_ijLoQjmjFNU6yC93yj5M8A_x_sFIhG8'
 };
 
 // ⚠️ SECURITY NOTE: This anon key is public (designed for client-side use).

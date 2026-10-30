@@ -18,8 +18,8 @@ dist/
 dist-ssr/
 *.local
 out/
-docs/
-public/
+# docs/ TIDAK di-ignore — ini adalah GitHub Pages output directory
+# public/ TIDAK di-ignore — ini berisi static assets
 
 # IDE / Editor config
 .vscode/
