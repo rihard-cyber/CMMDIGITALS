@@ -892,7 +892,7 @@ export default function BarcodeGenerator({
         { label: 'Pencarian', value: searchArea || '-' },
         { label: 'Total Checkpoint', value: rows.length },
         { label: 'Sumber', value: 'Barcode Generator' },
-        { label: 'Gedung', value: 'Jakarta Design Center' }
+        { label: 'Gedung', value: 'CMMDIGITAL - Gedung Pusat' }
       ],
       columns: [
         { header: 'NO', width: '5%' },
@@ -926,7 +926,7 @@ export default function BarcodeGenerator({
         { label: 'Pencarian', value: searchPos || '-' },
         { label: 'Total Pos', value: filteredPosList.length },
         { label: 'Sumber', value: 'Barcode Generator' },
-        { label: 'Gedung', value: 'Jakarta Design Center' }
+        { label: 'Gedung', value: 'CMMDIGITAL - Gedung Pusat' }
       ],
       columns: [
         { header: 'NO', width: '6%' },

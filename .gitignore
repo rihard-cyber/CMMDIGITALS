@@ -46,3 +46,12 @@ android/*.iml
 
 # Supabase
 supabase/
+
+# File sensitif — JANGAN pernah di-commit
+*sandi*
+*password*
+*secret*
+*token*
+*credential*
+*.pem
+*.key

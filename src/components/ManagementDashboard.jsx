@@ -461,7 +461,7 @@ export default function ManagementDashboard({
           iconAnchor: [7, 7]
         });
         window.L.marker([defaultLat, defaultLng], { icon: jdcIcon }).addTo(map)
-          .bindPopup('<b>Jakarta Design Center (CMD)</b><br/>Gedung Pusat Keamanan').openPopup();
+          .bindPopup('<b>CMMDIGITAL (CMD)</b><br/>Gedung Pusat Keamanan').openPopup();
 
         markerGroupRef.current = window.L.layerGroup().addTo(map);
       }
