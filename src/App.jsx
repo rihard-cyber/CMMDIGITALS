@@ -189,7 +189,6 @@ function DeveloperWatermarkBackground({ theme = 'dark' }) {
           left: 0;
           width: 100vw;
           height: 100vh;
-          overflow: hidden;
           pointer-events: none;
           z-index: 0;
           user-select: none;
@@ -202,10 +201,11 @@ function DeveloperWatermarkBackground({ theme = 'dark' }) {
           100% { transform: translate3d(5vw, 5vh, 0); }
         }
         .ukiran-watermark {
-          position: fixed;
+          position: absolute;
           left: 0;
           top: 0;
           animation: watermark-drift 60s ease-in-out infinite;
+          will-change: transform;
           text-align: center;
           font-family: 'Consolas', monospace;
           pointer-events: none;
@@ -218,7 +218,10 @@ function DeveloperWatermarkBackground({ theme = 'dark' }) {
           width: 340px;
           padding: 1rem;
           border-radius: 12px;
-          transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+          transition: opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+                      box-shadow 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+                      border-color 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+                      background 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         
         .theme-dark .ukiran-watermark {
