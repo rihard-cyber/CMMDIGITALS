@@ -36,6 +36,11 @@ export const initSupabase = () => {
   }
   try {
     supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false
+      },
       realtime: { params: { eventsPerSecond: 10 } }
     });
     console.log('[Supabase] Terhubung:', supabaseConfig.url);
@@ -44,6 +49,174 @@ export const initSupabase = () => {
     supabase = null;
   }
   return supabase;
+};
+
+// ─── Supabase Auth: NRP + PIN → email sintetis ───
+export const nrpToEmail = (nrp) => {
+  const local = String(nrp || '').trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+  return local ? `${local}@cmmdigital.app` : '';
+};
+
+export const getAuthSession = async () => {
+  const client = initSupabase();
+  if (!client) return null;
+  try {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    return data.session || null;
+  } catch (e) {
+    console.warn('[Auth] Gagal membaca session:', e?.message || e);
+    return null;
+  }
+};
+
+export const getAuthProfile = async () => {
+  const client = initSupabase();
+  if (!client) return { session: null, profile: null };
+  const session = await getAuthSession();
+  if (!session) return { session: null, profile: null };
+  const { data, error } = await client
+    .from('users')
+    .select('*')
+    .eq('auth_user_id', session.user.id)
+    .maybeSingle();
+  if (error) throw error;
+  return { session, profile: data ? normalizeDoc(data) : null };
+};
+
+export const signInWithNrp = async (nrp, pin) => {
+  const client = initSupabase();
+  if (!client) return { error: new Error('Supabase belum dikonfigurasi') };
+  const email = nrpToEmail(nrp);
+  if (!email) return { error: new Error('NRP tidak valid') };
+
+  const { data, error } = await client.auth.signInWithPassword({ email, password: pin });
+  if (error) return { error };
+
+  const { data: profile, error: profileError } = await client
+    .from('users')
+    .select('*')
+    .eq('auth_user_id', data.user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    await client.auth.signOut().catch(() => {});
+    return { error: profileError };
+  }
+  if (!profile) {
+    await client.auth.signOut().catch(() => {});
+    return { error: new Error('Akun ini belum terhubung ke profil anggota. Hubungi Admin Super.') };
+  }
+  if ((profile.status || '').toLowerCase() === 'nonaktif') {
+    await client.auth.signOut().catch(() => {});
+    return { error: new Error('Akun ini sedang nonaktif. Hubungi Admin Super.') };
+  }
+
+  return { session: data.session, profile: normalizeDoc(profile) };
+};
+
+export const signOutAuth = async () => {
+  const client = initSupabase();
+  if (!client) return;
+  try { await client.auth.signOut(); } catch (e) { console.warn('[Auth] Gagal sign out:', e?.message || e); }
+};
+
+/** Ganti PIN sendiri. PIN lama diverifikasi di database (bcrypt). */
+export const changeMyPin = async (currentPin, newPin) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const { error } = await client.rpc('change_my_pin', {
+    p_current_pin: String(currentPin || ''),
+    p_new_pin: String(newPin || '')
+  });
+  if (error) throw error;
+};
+
+/** Admin Super membuat akun login + profil anggota sekaligus. */
+export const adminCreateMember = async ({ nrp, nama, jabatan, regu, nomorHp, tenantId, tempPin }) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const { data, error } = await client.rpc('admin_create_member', {
+    p_nrp: String(nrp || ''),
+    p_nama: String(nama || ''),
+    p_jabatan: String(jabatan || 'Anggota'),
+    p_regu: String(regu || ''),
+    p_nomor_hp: String(nomorHp || ''),
+    p_tenant_id: tenantId || getCurrentTenant() || null,
+    p_temp_pin: tempPin ? String(tempPin) : null
+  });
+  if (error) throw error;
+  return normalizeDoc(data);
+};
+
+export const adminResetMemberPin = async (supabaseId, tempPin) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const { error } = await client.rpc('admin_reset_member_pin', {
+    p_supabase_id: supabaseId,
+    p_temp_pin: String(tempPin || '')
+  });
+  if (error) throw error;
+};
+
+export const adminDeleteMember = async (supabaseId) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const { error } = await client.rpc('admin_delete_member', {
+    p_supabase_id: supabaseId
+  });
+  if (error) throw error;
+};
+
+export const updateMember = async (supabaseId, updates) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const dbData = prepareData(updates, 'users');
+  const { data, error } = await client.rpc('update_member', {
+    p_supabase_id: supabaseId,
+    p_updates: dbData
+  });
+  if (error) throw error;
+  return data ? normalizeDoc(data) : null;
+};
+
+/** Form komplain publik: daftar tenant tanpa membuka tabel tenants ke anon. */
+export const loadPublicTenants = async () => {
+  const client = initSupabase();
+  if (!client) return [];
+  const { data, error } = await client.rpc('list_public_tenants');
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+};
+
+/** Kirim komplain tanpa login (RPC tervalidasi di database). */
+export const submitPublicComplaint = async (complaint) => {
+  const client = initSupabase();
+  if (!client) throw new Error('Supabase belum dikonfigurasi');
+  const tenantId = complaint?.tenant_id || complaint?.tenantId || getCurrentTenant();
+  if (!tenantId) throw new Error('Lokasi/gedung komplain belum dipilih');
+  const { data, error } = await client.rpc('submit_complaint', {
+    payload: {
+      ...complaint,
+      tenant_id: tenantId,
+      ticket_id: complaint?.ticketId || complaint?.ticket_id,
+      created_at: complaint?.createdAt || complaint?.created_at
+    }
+  });
+  if (error) throw error;
+  return data;
+};
+
+/** Lacak tiket publik lewat RPC terbatas (tanpa akses tabel langsung). */
+export const trackComplaint = async (ticketId) => {
+  const client = initSupabase();
+  if (!client || !ticketId) return null;
+  const { data, error } = await client.rpc('track_complaint', {
+    p_ticket_id: String(ticketId).trim().toUpperCase()
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ? normalizeDoc(row) : null;
 };
 
 // ─── Helpers: snake_case ↔ camelCase ───
@@ -72,7 +245,7 @@ function normalizeDoc(doc) {
 }
 
 const KNOWN_TABLE_COLUMNS = {
-  users: new Set(['id', 'nrp', 'nama', 'jabatan', 'regu', 'avatar', 'status', 'email', 'nomor_hp', 'last_active', 'firebase_saved_at', 'created_at', 'updated_at', 'tenant_id']),
+  users: new Set(['id', 'nrp', 'nama', 'jabatan', 'regu', 'avatar', 'status', 'email', 'nomor_hp', 'last_active', 'firebase_saved_at', 'created_at', 'updated_at', 'tenant_id', 'auth_user_id', 'must_change_password', 'pin_updated_at']),
   patrol_reports: new Set(['id', 'user_id', 'user_name', 'nrp', 'nomor_hp', 'shift', 'regu', 'area_id', 'gedung', 'lantai', 'zona', 'titik', 'kondisi', 'keterangan', 'foto', 'severity', 'timestamp', 'timestamp_end', 'date', 'time', 'kategori', 'kode_temuan', 'temuan', 'status', 'anti_fraud', 'jabatan', 'created_at', 'firebase_saved_at', 'updated_at', 'tenant_id']),
   findings: new Set(['id', 'report_id', 'kategori', 'area', 'tanggal', 'pelapor', 'nrp', 'nomor_hp', 'shift', 'regu', 'status', 'severity', 'detail', 'foto', 'department', 'wa_status', 'wa_sent_at', 'created_at', 'firebase_saved_at', 'updated_at', 'tenant_id']),
   attendance_logs: new Set(['id', 'tanggal', 'shift', 'regu', 'details', 'created_at', 'firebase_saved_at', 'updated_at', 'tenant_id']),
@@ -276,29 +449,33 @@ const createBulkDeleter = (tableName) => async () => {
 // ─── Complaints ───
 export const subscribeComplaints = (callback, opts = {}) =>
   createSubscriber('complaints', callback, 'created_at', opts);
-export const addComplaintToFirestore = createAdder('complaints');
+
+const addComplaintDirect = createAdder('complaints');
+
+// Form publik tidak punya session; gunakan RPC submit_complaint.
+// Pengguna login tetap memakai insert langsung agar semua field tersimpan.
+export const addComplaintToFirestore = async (complaint) => {
+  const client = initSupabase();
+  if (!client) return null;
+  try {
+    const { data: sessionData } = await client.auth.getSession();
+    if (sessionData?.session) {
+      return await addComplaintDirect(complaint);
+    }
+    const result = await submitPublicComplaint(complaint);
+    return result?.supabase_id || null;
+  } catch (e) {
+    console.warn('[Supabase] Gagal simpan komplain:', e?.message || e);
+    throw e;
+  }
+};
+
 export const updateComplaintInFirestore = createUpdater('complaints');
 export const deleteComplaintFromFirestore = createDeleter('complaints');
 export const loadAllComplaintsFromFirestore = createLoader('complaints');
 
 // Cek status tiket dari perangkat mana pun (form publik)
-export const loadComplaintByTicket = async (ticketId) => {
-  const client = initSupabase();
-  if (!client || !ticketId) return null;
-  try {
-    const { data, error } = await client
-      .from('complaints')
-      .select('*')
-      .eq('ticket_id', String(ticketId).trim().toUpperCase())
-      .limit(1)
-      .maybeSingle();
-    if (error) throw error;
-    return data ? normalizeDoc(data) : null;
-  } catch (e) {
-    console.warn('[Supabase] Gagal cek tiket komplain:', e);
-    return null;
-  }
-};
+export const loadComplaintByTicket = (ticketId) => trackComplaint(ticketId);
 
 // ─── Found Items (Penemuan Barang / Lost & Found) ───
 export const subscribeFoundItems = (callback, opts = {}) =>
@@ -340,30 +517,15 @@ export const deleteMutasiLogFromFirestore = createDeleter('mutasi_logs');
 export const subscribeUsers = (callback, opts = {}) =>
   createSubscriber('users', callback, 'nrp', opts);
 export const addUserToFirestore = createAdder('users');
-export const updateUserInFirestore = createUpdater('users');
-export const deleteUserFromFirestore = createDeleter('users');
+// Semua update user (profil sendiri maupun anggota oleh Admin Super)
+// melewati RPC update_member agar kolom sensitif tidak bisa diubah langsung.
+export const updateUserInFirestore = (supabaseId, updates) => updateMember(supabaseId, updates);
+export const deleteUserFromFirestore = (supabaseId) => adminDeleteMember(supabaseId);
 
-export const resetUsersInFirestore = async (defaultUsers) => {
-  const client = initSupabase();
-  if (!client) return false;
-  try {
-    const tenantId = getCurrentTenant();
-    let delQuery = client.from('users').delete().neq('supabase_id', '00000000-0000-0000-0000-000000000000');
-    if (tenantId) delQuery = delQuery.eq('tenant_id', tenantId);
-    await delQuery;
-    for (const u of defaultUsers) {
-      const { firebaseId, ...userData } = u;
-      const dbData = prepareData(userData, 'users');
-      dbData.created_at = new Date().toISOString();
-      dbData.firebase_saved_at = new Date().toISOString();
-      const { error } = await client.from('users').insert(dbData);
-      if (error) console.warn('[Supabase] Gagal insert user:', error);
-    }
-    return true;
-  } catch (e) {
-    console.warn('[Supabase] Gagal reset users:', e);
-    return false;
-  }
+// Reset massal user tidak lagi diizinkan — akun login dikelola lewat Auth.
+export const resetUsersInFirestore = async () => {
+  console.warn('[Supabase] resetUsersInFirestore dinonaktifkan. Gunakan manajemen anggota.');
+  return false;
 };
 
 // ─── Areas / Checkpoints ───

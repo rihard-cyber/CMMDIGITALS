@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { UserPlus, User, Shield, Smartphone, Hash, Users, Search, ChevronDown, ChevronRight, Save, MessageSquare, Edit3, X, Check, Trash2, RefreshCw, AlertCircle, CloudOff, Cloud } from 'lucide-react';
+import { UserPlus, Shield, Users, Search, ChevronDown, ChevronRight, Save, MessageSquare, Edit3, X, Check, Trash2, KeyRound, Loader } from 'lucide-react';
 import { getWAContacts, saveWAContacts } from '../data/waContacts';
-import { addUserToFirestore, getCurrentTenant } from '../utils/supabase';
 
 
 const ROLE_OPTIONS = [
@@ -24,7 +23,7 @@ const ROLE_COLORS = {
   'Guest Viewer': '#8b5cf6'
 };
 
-export default function UserManagement({ users, currentUser, onAddUser, onUpdateUser, onDeleteUser, onSaveWAContacts }) {
+export default function UserManagement({ users, currentUser, onAddUser, onUpdateUser, onDeleteUser, onResetPin, onSaveWAContacts }) {
   const [reguPilih, setReguPilih] = useState('Regu B');
   const [reguKustom, setReguKustom] = useState('');
   const [anggotaInput, setAnggotaInput] = useState('');
@@ -36,8 +35,7 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
   const [editRegu, setEditRegu] = useState('');
   const [waContacts, setWaContacts] = useState(() => getWAContacts());
   const [saveStatus, setSaveStatus] = useState('');
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
 
 
   const allowedRoles = currentUser?.jabatan === 'Admin Super'
@@ -73,55 +71,49 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
 
   const generateNrp = () => String(nextNrp).padStart(5, '0');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isSaving) return;
     const regu = isReguKustom ? reguKustom.trim() : reguPilih;
     if (!regu) { alert('Pilih atau tulis nama Regu!'); return; }
     if (anggotaList.length === 0) { alert('Masukkan minimal 1 nama anggota!'); return; }
 
+    setIsSaving(true);
     let nrpCounter = nextNrp;
-    anggotaList.forEach(nama => {
+    let allOk = true;
+    for (const nama of anggotaList) {
       const nrp = String(nrpCounter++).padStart(5, '0');
-      onAddUser({
+      const ok = await onAddUser({
         nama,
         nrp,
         jabatan: role,
         regu,
-        pin: nrp.slice(-4),
         status: 'Aktif'
       });
-    });
+      if (!ok) { allOk = false; break; }
+    }
+    setIsSaving(false);
 
-    setAnggotaInput('');
+    if (allOk) setAnggotaInput('');
   };
 
-  // Force sync semua user ke Supabase
-  const handleForceSyncFirebase = async () => {
-    setIsSyncing(true);
-    setSyncResult(null);
-    let synced = 0, failed = 0;
-    const errors = [];
-    for (const u of users) {
-      if (u.supabaseId) { synced++; continue; }
-      try {
-        const tenantId = getCurrentTenant();
-        const sid = await addUserToFirestore({ ...u, pin: undefined, tenant_id: tenantId });
-        if (sid) {
-          synced++;
-        } else {
-          failed++;
-          errors.push(`${u.nama}: returned null`);
-        }
-      } catch(e) {
-        failed++;
-        errors.push(`${u.nama}: ${e.message || e}`);
-      }
-      await new Promise(r => setTimeout(r, 200));
+  const handleResetPin = async (u) => {
+    if (!onResetPin) return;
+    if (!window.confirm(`Reset PIN untuk ${u.nama} (NRP: ${u.nrp})?`)) return;
+    const tempPin = window.prompt(
+      `Masukkan PIN sementara untuk ${u.nama} (minimal 6 karakter):`,
+      ''
+    );
+    if (tempPin === null) return;
+    if (tempPin.trim().length < 6) {
+      alert('PIN sementara minimal 6 karakter.');
+      return;
     }
-    setIsSyncing(false);
-    setSyncResult({ synced, failed, total: users.length, errors });
-    if (errors.length > 0) console.error('[Sync Errors]', errors);
-    setTimeout(() => setSyncResult(null), 15000);
+    if (tempPin.trim().toLowerCase() === String(u.nrp).toLowerCase()) {
+      alert('PIN sementara tidak boleh sama dengan NRP.');
+      return;
+    }
+    await onResetPin(u.id, tempPin.trim());
   };
 
 
@@ -209,77 +201,22 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
         }
       `}</style>
 
-      {/* ── Panel Status Sinkronisasi Firebase ─────────────────────────── */}
-      {currentUser?.jabatan === 'Admin Super' && (() => {
-        const unsyncedCount = users.filter(u => !u.supabaseId).length;
-        const syncedCount = users.length - unsyncedCount;
-        return (
-          <div className="glass-panel" style={{
-            padding: '1rem 1.25rem',
-            border: unsyncedCount > 0 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(16,185,129,0.3)',
-            background: unsyncedCount > 0 ? 'rgba(239,68,68,0.05)' : 'rgba(16,185,129,0.05)',
-            display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {unsyncedCount > 0
-                  ? <AlertCircle size={16} style={{ color: '#ef4444' }} />
-                  : <Cloud size={16} style={{ color: '#10b981' }} />}
-                <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>
-                  {unsyncedCount > 0
-                    ? `⚠️ ${unsyncedCount} user BELUM tersync ke Cloud`
-                    : `✅ Semua ${users.length} user sudah tersync ke Firebase`}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: '1.5rem' }}>
-                <span>Total user: <strong style={{ color: 'var(--text-primary)' }}>{users.length}</strong></span>
-                <span>Tersync (Cloud): <strong style={{ color: '#10b981' }}>{syncedCount}</strong></span>
-                <span>Belum sync: <strong style={{ color: unsyncedCount > 0 ? '#ef4444' : '#10b981' }}>{unsyncedCount}</strong></span>
-              </div>
-              {unsyncedCount > 0 && (
-                <div style={{ fontSize: '0.7rem', color: '#f59e0b', marginTop: '0.15rem' }}>
-                  💡 User yang belum sync tidak akan muncul di browser/perangkat lain. Klik Force Sync untuk memperbaiki.
-                </div>
-              )}
-              {syncResult && (
-                <div>
-                  <div style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>
-                    ✓ Sync selesai: {syncResult.synced} berhasil
-                    {syncResult.failed > 0 ? `, ${syncResult.failed} gagal` : ''}
-                  </div>
-                  {syncResult.errors?.length > 0 && (
-                    <details style={{ marginTop: '0.3rem' }}>
-                      <summary style={{ fontSize: '0.65rem', color: '#ef4444', cursor: 'pointer' }}>
-                        Lihat {syncResult.errors.length} error
-                      </summary>
-                      <div style={{ fontSize: '0.6rem', color: '#f87171', maxHeight: '120px', overflowY: 'auto', background: 'rgba(239,68,68,0.05)', padding: '0.3rem', borderRadius: '4px', marginTop: '0.2rem' }}>
-                        {syncResult.errors.slice(0, 10).map((err, i) => (
-                          <div key={i} style={{ marginBottom: '0.15rem' }}>{err}</div>
-                        ))}
-                        {syncResult.errors.length > 10 && <div>...dan {syncResult.errors.length - 10} lainnya</div>}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={handleForceSyncFirebase}
-              disabled={isSyncing}
-              style={{
-                padding: '0.55rem 1.25rem', borderRadius: '8px', border: 'none',
-                background: isSyncing ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.9)',
-                color: 'white', cursor: isSyncing ? 'not-allowed' : 'pointer',
-                display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.82rem',
-                boxShadow: isSyncing ? 'none' : '0 0 12px rgba(59,130,246,0.4)'
-              }}
-            >
-              <RefreshCw size={15} style={{ animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
-              {isSyncing ? 'Mengupload...' : 'Force Sync ke Cloud'}
-            </button>
-          </div>
-        );
-      })()}
+      {/* ── Info keamanan akun ─────────────────────────────────────────── */}
+      {currentUser?.jabatan === 'Admin Super' && (
+        <div className="glass-panel" style={{
+          padding: '0.9rem 1.25rem',
+          border: '1px solid rgba(16,185,129,0.3)',
+          background: 'rgba(16,185,129,0.05)',
+          display: 'flex', alignItems: 'center', gap: '0.6rem',
+          fontSize: '0.78rem', color: 'var(--text-secondary)'
+        }}>
+          <Shield size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+          <span>
+            Akun login anggota dibuat di server (Supabase Auth). PIN sementara wajib diganti
+            saat login pertama. Gunakan tombol <strong>Reset PIN</strong> bila anggota lupa PIN.
+          </span>
+        </div>
+      )}
 
       {/* Form Tambah Anggota per Regu */}
       <div className="glass-panel" style={{ padding: '1.5rem' }}>
@@ -334,8 +271,9 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
             )}
           </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%', padding: '0.75rem' }}>
-            <UserPlus size={16} /> Daftarkan {anggotaList.length > 0 ? `${anggotaList.length} Anggota` : 'Anggota'}
+          <button type="submit" className="btn-primary" disabled={isSaving} style={{ width: '100%', padding: '0.75rem', opacity: isSaving ? 0.7 : 1 }}>
+            {isSaving ? <Loader size={16} className="spin-slow" /> : <UserPlus size={16} />}
+            {isSaving ? 'Menyimpan...' : `Daftarkan ${anggotaList.length > 0 ? `${anggotaList.length} Anggota` : 'Anggota'}`}
           </button>
         </form>
       </div>
@@ -525,6 +463,11 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
                         <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.05rem 0.35rem', borderRadius: '3px', fontSize: '0.6rem', fontWeight: 700, background: `${ROLE_COLORS[u.jabatan] || '#666'}20`, color: ROLE_COLORS[u.jabatan] || '#666' }}>
                           {u.jabatan}
                         </span>
+                        {(u.mustChangePassword || u.must_change_password) && (
+                          <span style={{ padding: '0.05rem 0.35rem', borderRadius: '3px', fontSize: '0.58rem', fontWeight: 700, background: 'rgba(245,158,11,0.15)', color: '#f59e0b' }}>
+                            PIN sementara
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
@@ -545,6 +488,19 @@ export default function UserManagement({ users, currentUser, onAddUser, onUpdate
                           title="Ubah role/regu"
                         >
                           <Edit3 size={16}/>
+                        </button>
+                      )}
+                      {currentUser?.jabatan === 'Admin Super' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            handleResetPin(u);
+                          }}
+                          className="user-action-btn edit"
+                          title="Reset PIN sementara"
+                        >
+                          <KeyRound size={16}/>
                         </button>
                       )}
                       {allowedRoles.includes(u.jabatan) && (

@@ -1,29 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, User, Lock, Eye, EyeOff, Smartphone, Building, Clock, Loader, LogIn, Building2 } from 'lucide-react';
-import { hashPin, verifyPin, createSession, getLoginAttempts, recordLoginAttempt, signRoleInSession, signUserData } from '../utils/security';
-import { subscribeTenants, setCurrentTenant } from '../utils/supabase';
+import { Shield, Lock, Eye, EyeOff, Smartphone, Building, Loader, Building2, KeyRound, LogOut } from 'lucide-react';
+import { subscribeTenants, setCurrentTenant, signInWithNrp, changeMyPin, signOutAuth } from '../utils/supabase';
 
-export default function LoginPage({ users: usersProp = [], onLogin, onSetup, hasUsers, firebaseUsersLoaded = true }) {
+const friendlyAuthError = (err) => {
+  const msg = String(err?.message || err || '');
+  if (/invalid login credentials|invalid_credentials/i.test(msg)) return 'NRP atau PIN salah.';
+  if (/email not confirmed|email_not_confirmed/i.test(msg)) return 'Akun belum dikonfirmasi. Hubungi Admin Super.';
+  if (/rate limit|over_.*rate/i.test(msg)) return 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.';
+  if (/fetch|network|failed to fetch/i.test(msg)) return 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+  if (/profile|profil/i.test(msg)) return msg;
+  return msg || 'Login gagal. Silakan coba lagi.';
+};
+
+const friendlyPinError = (err) => {
+  const msg = String(err?.message || err || '');
+  if (/current_pin_invalid/i.test(msg)) return 'PIN saat ini salah. Silakan login ulang.';
+  if (/pin_weak/i.test(msg)) return 'PIN baru minimal 6 karakter dan tidak boleh sama dengan NRP.';
+  if (/pin_same/i.test(msg)) return 'PIN baru harus berbeda dari PIN lama.';
+  if (/unauthenticated/i.test(msg)) return 'Sesi login berakhir. Silakan login ulang.';
+  return msg || 'Gagal memperbarui PIN.';
+};
+
+export default function LoginPage({ onLogin, initialProfile = null }) {
   const [nrp, setNrp] = useState('');
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Multi-tenant: tahap setelah login sukses — pilih tenant/gedung
-  const [tenantStep, setTenantStep] = useState(false);      // false = form login, true = pilih tenant
+  // login → change-pin (wajib saat login pertama) → tenant
+  const initialMustChange = !!(initialProfile?.mustChangePassword || initialProfile?.must_change_password);
+  const [step, setStep] = useState(
+    initialProfile ? (initialMustChange ? 'change-pin' : 'tenant') : 'login'
+  );
+  const [authedUser, setAuthedUser] = useState(initialProfile || null);
+
+  const [newPin, setNewPin] = useState('');
+  const [confirmNewPin, setConfirmNewPin] = useState('');
+  const [pinNotice, setPinNotice] = useState('');
+
   const [tenants, setTenants] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [loadingTenants, setLoadingTenants] = useState(false);
-  const [authedUser, setAuthedUser] = useState(null);       // user yang sudah terverifikasi, menunggu pemilihan tenant
 
-  const [setupMode, setSetupMode] = useState(!hasUsers);
-  const [setupNama, setSetupNama] = useState('');
-  const [setupNrp, setSetupNrp] = useState('');
-  const [setupPin, setSetupPin] = useState('');
-  const [setupConfirmPin, setSetupConfirmPin] = useState('');
+  useEffect(() => {
+    if (initialProfile) {
+      setAuthedUser(initialProfile);
+      setStep(initialMustChange ? 'change-pin' : 'tenant');
+    }
+  }, [initialProfile, initialMustChange]);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -32,157 +59,128 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
       return;
     }
 
-    const attempts = getLoginAttempts(nrp.trim());
-    if (attempts.locked) {
-      const menit = Math.floor(attempts.remainingTime / 60);
-      const detik = attempts.remainingTime % 60;
-      setError(`Terlalu banyak percobaan. Coba lagi ${menit}m ${detik}d lagi.`);
-      return;
-    }
-
     setLoading(true);
-    setTimeout(() => {
-      const lsUsers = JSON.parse(localStorage.getItem('sapujagat_users') || '[]');
-      const allUsers = usersProp.length > 0 ? usersProp : lsUsers;
-      const user = allUsers.find(u => u.nrp === nrp.trim()) || lsUsers.find(u => u.nrp === nrp.trim());
-      
-      if (!user) {
-        recordLoginAttempt(nrp.trim(), false);
-        setError('NRP tidak ditemukan');
-        setLoading(false);
+    try {
+      const result = await signInWithNrp(nrp.trim(), pin);
+      if (result.error) {
+        setError(friendlyAuthError(result.error));
         return;
       }
-
-      let storedPin = localStorage.getItem(`cmdigital_pin_${user.id}`);
-      const pinSuffixHash = hashPin(user.nrp.slice(-4));
-      const fullNrpHash = hashPin(user.nrp);
-
-      const isValidPin = (storedPin && verifyPin(pin, storedPin)) ||
-                         verifyPin(pin, pinSuffixHash) ||
-                         verifyPin(pin, fullNrpHash);
-
-      if (!isValidPin) {
-        recordLoginAttempt(nrp.trim(), false);
-        setError('PIN salah');
-        setLoading(false);
-        return;
-      }
-
-      // Pastikan hash PIN tersimpan
-      if (!storedPin || !verifyPin(pin, storedPin)) {
-        localStorage.setItem(`cmdigital_pin_${user.id}`, hashPin(pin));
-      }
-
-      recordLoginAttempt(nrp.trim(), true);
-      const session = createSession(user.id);
-      session.roleToken = signRoleInSession(user.id, user.jabatan);
-      localStorage.setItem('cmdigital_session', JSON.stringify(session));
-      setAuthedUser(user);
-      setTenantStep(true);
+      const profile = result.profile;
+      setAuthedUser(profile);
+      setStep(profile.mustChangePassword || profile.must_change_password ? 'change-pin' : 'tenant');
+    } catch (err) {
+      setError(friendlyAuthError(err));
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
-  const handleSetup = (e) => {
+  const handleChangePin = async (e) => {
     e.preventDefault();
     setError('');
+    setPinNotice('');
 
-    if (!setupNama.trim() || !setupNrp.trim() || !setupPin.trim()) {
-      setError('Semua field harus diisi');
+    if (newPin.length < 6) {
+      setError('PIN baru minimal 6 karakter.');
       return;
     }
-    if (setupPin.length < 6) {
-      setError('PIN minimal 6 karakter');
+    if (newPin !== confirmNewPin) {
+      setError('Konfirmasi PIN baru tidak cocok.');
       return;
     }
-    if (!/[A-Za-z]/.test(setupPin) || !/\d/.test(setupPin)) {
-      setError('PIN harus mengandung huruf dan angka');
-      return;
-    }
-    if (setupPin !== setupConfirmPin) {
-      setError('PIN tidak cocok');
+    if (newPin === pin) {
+      setError('PIN baru harus berbeda dari PIN sementara.');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const hashed = hashPin(setupPin);
-      const newUser = {
-        id: 1,
-        nama: setupNama.trim(),
-        nrp: setupNrp.trim(),
-        jabatan: 'Admin Super',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60'
-      };
-      
-      localStorage.setItem('sapujagat_users', JSON.stringify([newUser]));
-      signUserData([newUser]);
-      localStorage.setItem(`cmdigital_pin_${newUser.id}`, hashed);
-      const session = createSession(newUser.id);
-      session.roleToken = signRoleInSession(newUser.id, newUser.jabatan);
-      localStorage.setItem('cmdigital_session', JSON.stringify(session));
-      
-      onSetup(newUser);
+    try {
+      await changeMyPin(pin, newPin);
+      setAuthedUser((prev) => prev ? { ...prev, mustChangePassword: false, must_change_password: false } : prev);
+      setPin('');
+      setNewPin('');
+      setConfirmNewPin('');
+      setPinNotice('PIN berhasil diperbarui. Pilih lokasi kerja Anda.');
+      setStep('tenant');
+    } catch (err) {
+      const msg = friendlyPinError(err);
+      setError(msg);
+      if (/login ulang|sesi/i.test(msg)) {
+        await signOutAuth().catch(() => {});
+        setStep('login');
+        setAuthedUser(null);
+      }
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
-  // Muat daftar tenant saat masuk tahap pemilihan tenant
+  // Muat daftar tenant setelah autentikasi. RLS hanya mengembalikan tenant
+  // yang boleh diakses; Admin Super melihat semua, anggota hanya lokasinya.
   useEffect(() => {
-    if (!tenantStep || !authedUser) return;
+    if (step !== 'tenant' || !authedUser) return;
+    let cancelled = false;
     setLoadingTenants(true);
+    setError('');
+
     const unsub = subscribeTenants((data) => {
+      if (cancelled) return;
       setLoadingTenants(false);
       if (!data || !Array.isArray(data)) {
         setTenants([]);
         return;
       }
 
-      // Admin Super = pengelola PT. CMM, boleh memilih semua lokasi.
-      // Anggota/role lain hanya boleh masuk ke tenant tempat ia terdaftar.
-      const userTenantId = authedUser?.tenantId || authedUser?.tenant_id || null;
-      const isOwner = authedUser?.jabatan === 'Admin Super';
-      const allowed = isOwner
-        ? data
-        : data.filter((t) => t.id === userTenantId);
+      const userTenantId = authedUser.tenantId || authedUser.tenant_id || null;
+      const isOwner = authedUser.jabatan === 'Admin Super';
+      const allowed = isOwner ? data : data.filter((t) => t.id === userTenantId);
 
       setTenants(allowed);
-      // Jika hanya ada satu lokasi, langsung pilih agar tidak salah pilih
       if (allowed.length === 1) setSelectedTenant(allowed[0]);
       else setSelectedTenant(null);
     }, { limit: 100 });
-    return () => unsub();
-  }, [tenantStep, authedUser]);
 
-  // Handler saat tenant dipilih
+    return () => { cancelled = true; unsub(); };
+  }, [step, authedUser]);
+
   const handleSelectTenant = () => {
     if (!selectedTenant) {
       setError('Silakan pilih lokasi / gedung terlebih dahulu');
       return;
     }
-    setLoading(true);
-    setTimeout(() => {
-      // Set konteks tenant aktif — selalu pakai tenants.id (bukan slug)
-      setCurrentTenant(selectedTenant.id);
+    setError('');
+    setCurrentTenant(selectedTenant.id);
 
-      // Simpan tenant aktif ke session agar App.jsx tahu
-      const sessionStr = localStorage.getItem('cmdigital_session');
-      let session = {};
-      try { session = JSON.parse(sessionStr || '{}'); } catch (_) {}
-      session.tenantId = selectedTenant.id;
-      session.tenantSlug = selectedTenant.slug;
-      session.tenantNama = selectedTenant.nama;
-      localStorage.setItem('cmdigital_session', JSON.stringify(session));
+    const meta = {
+      id: selectedTenant.id,
+      slug: selectedTenant.slug,
+      nama: selectedTenant.nama
+    };
+    try { localStorage.setItem('cmdigital_tenant_meta', JSON.stringify(meta)); } catch (_) {}
 
-      // Pindah ke dashboard dengan user + tenant
-      onLogin({ ...authedUser, tenantId: selectedTenant.id, tenantSlug: selectedTenant.slug, tenantNama: selectedTenant.nama });
-      setLoading(false);
-    }, 500);
+    onLogin({
+      ...authedUser,
+      tenantId: selectedTenant.id,
+      tenantSlug: selectedTenant.slug,
+      tenantNama: selectedTenant.nama
+    });
   };
 
-  // Show loading while Firebase syncs user data or authenticating user
-  if (!firebaseUsersLoaded || loading) {
-    const isSync = !firebaseUsersLoaded;
+  const handleBackToLogin = async () => {
+    await signOutAuth().catch(() => {});
+    setStep('login');
+    setAuthedUser(null);
+    setTenants([]);
+    setSelectedTenant(null);
+    setPin('');
+    setNewPin('');
+    setConfirmNewPin('');
+    setError('');
+    setPinNotice('');
+  };
+
+  if (loading) {
     return (
       <div className="splash-screen cyber-screen">
         <div className="cyber-corner corner-tl"></div>
@@ -202,8 +200,8 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
         </div>
         <div className="cyber-progress-container">
           <div className="cyber-progress-header">
-            <span className="progress-label">{isSync ? 'CORE SYSTEM LOAD' : 'AUTHENTICATING PROFILE'}</span>
-            <span className="progress-percent">{isSync ? 'SYNCHRONIZING...' : 'SECURE CONTEXT'}</span>
+            <span className="progress-label">AUTHENTICATING PROFILE</span>
+            <span className="progress-percent">SECURE CONTEXT</span>
           </div>
           <div className="cyber-progress-bar">
             <div className="cyber-progress-fill" style={{ width: '75%', animation: 'pulse 1.5s infinite' }}></div>
@@ -211,25 +209,14 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
         </div>
         <div className="cyber-console">
           <div className="console-header">
-            <span className="console-title">{isSync ? '[SYSTEM CLOUD SYNC]' : '[SECURE ACCESS VERIFICATION]'}</span>
-            <span className="console-status blink">{isSync ? 'CONNECTING DATABASE' : 'VERIFYING CREDENTIALS'}</span>
+            <span className="console-title">[SECURE ACCESS VERIFICATION]</span>
+            <span className="console-status blink">VERIFYING CREDENTIALS</span>
           </div>
           <div className="console-body">
-            {isSync ? (
-              <>
-                <p className="console-line">&gt;&gt; FETCHING USER REGISTRY FROM FIREBASE...</p>
-                <p className="console-line">&gt;&gt; CONFIGURING OFFLINE SESSION HANDLERS...</p>
-                <p className="console-line">&gt;&gt; STABILIZING CRYPTO PRIVILEGES...</p>
-                <p className="console-line">&gt;&gt; CENTRAL NETWORK LINK ACTIVE ... OK</p>
-              </>
-            ) : (
-              <>
-                <p className="console-line">&gt;&gt; COMPILING CLIENT CRYPTO SIGNATURES...</p>
-                <p className="console-line">&gt;&gt; MATCHING REGISTERED SECURITY NRP...</p>
-                <p className="console-line">&gt;&gt; STABILIZING TOKEN SESSION KEYS...</p>
-                <p className="console-line">&gt;&gt; PIN COMPONENT AUTHENTICATION ACTIVE... OK</p>
-              </>
-            )}
+            <p className="console-line">&gt;&gt; COMPILING CLIENT CRYPTO SIGNATURES...</p>
+            <p className="console-line">&gt;&gt; MATCHING REGISTERED SECURITY NRP...</p>
+            <p className="console-line">&gt;&gt; STABILIZING TOKEN SESSION KEYS...</p>
+            <p className="console-line">&gt;&gt; SERVER-SIDE AUTHORIZATION ACTIVE... OK</p>
           </div>
         </div>
         <div className="splash-footer cyber-footer" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.2rem', width: '100%', maxWidth: '420px', padding: '0 1rem' }}>
@@ -248,7 +235,8 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
     );
   }
 
-  if (setupMode && !hasUsers) {
+  // ── TAHAP WAJIB GANTI PIN (login pertama / setelah reset Admin) ──
+  if (step === 'change-pin' && authedUser) {
     return (
       <div className="login-page">
         <div className="login-bg-animation">
@@ -261,50 +249,31 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
               <div className="login-logo-ring">
                 <img src="logo.png" alt="CMMDIGITAL" className="login-logo logo-3d" />
               </div>
-              <h1 className="login-title">Setup Awal CMMDIGITAL</h1>
-              <p className="login-subtitle">Buat akun Admin Super untuk memulai</p>
+              <h1 className="login-title">Ganti PIN Keamanan</h1>
+              <p className="login-subtitle">
+                Halo, <b>{authedUser.nama}</b> ({authedUser.nrp})
+              </p>
+              <p style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                PIN sementara Anda wajib diganti sebelum masuk. Gunakan minimal 6 karakter
+                dan jangan memakai NRP.
+              </p>
             </div>
 
-            <form onSubmit={handleSetup} className="login-form">
+            <form onSubmit={handleChangePin} className="login-form">
               {error && <div className="login-error">{error}</div>}
+              {pinNotice && <div className="login-success">{pinNotice}</div>}
 
               <div className="login-field">
-                <label>Nama Lengkap</label>
+                <label>PIN Baru (min. 6 karakter)</label>
                 <div className="login-input-wrap">
-                  <User size={18} />
-                  <input
-                    type="text"
-                    value={setupNama}
-                    onChange={(e) => setSetupNama(e.target.value)}
-                    placeholder="Contoh: Richard Meha"
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="login-field">
-                <label>NRP / ID</label>
-                <div className="login-input-wrap">
-                  <Smartphone size={18} />
-                  <input
-                    type="text"
-                    value={setupNrp}
-                    onChange={(e) => setSetupNrp(e.target.value)}
-                    placeholder="Contoh: 99999"
-                  />
-                </div>
-              </div>
-
-              <div className="login-field">
-                <label>PIN (min. 6 karakter, huruf + angka)</label>
-                <div className="login-input-wrap">
-                  <Lock size={18} />
+                  <KeyRound size={18} />
                   <input
                     type={showPin ? 'text' : 'password'}
-                    value={setupPin}
-                    onChange={(e) => setSetupPin(e.target.value)}
-                    placeholder="****"
-                    maxLength={12}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value)}
+                    placeholder="Masukkan PIN baru"
+                    maxLength={72}
+                    autoFocus
                   />
                   <button type="button" className="login-toggle-pin" onClick={() => setShowPin(!showPin)}>
                     {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -313,33 +282,31 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
               </div>
 
               <div className="login-field">
-                <label>Konfirmasi PIN</label>
+                <label>Konfirmasi PIN Baru</label>
                 <div className="login-input-wrap">
                   <Lock size={18} />
                   <input
                     type={showPin ? 'text' : 'password'}
-                    value={setupConfirmPin}
-                    onChange={(e) => setSetupConfirmPin(e.target.value)}
-                    placeholder="****"
-                    maxLength={12}
+                    value={confirmNewPin}
+                    onChange={(e) => setConfirmNewPin(e.target.value)}
+                    placeholder="Ulangi PIN baru"
+                    maxLength={72}
                   />
                 </div>
               </div>
 
               <button type="submit" className="login-btn" disabled={loading}>
-                {loading ? 'Memproses...' : 'Buat Akun & Mulai'}
+                Simpan PIN & Lanjut
+              </button>
+
+              <button type="button" onClick={handleBackToLogin} className="login-btn login-btn-secondary" style={{ background: 'transparent', border: '1px solid var(--border-glass)' }}>
+                <LogOut size={16} /> Batal & Login Ulang
               </button>
             </form>
 
-            <div className="login-footer-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', marginTop: '1.25rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
-              <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0, color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                <Building size={12} /> CMMDIGITAL - SISTEM MANAGEMENT MULTI-TENANT
-              </p>
-              <div className="ornamental-watermark" style={{ margin: '0.2rem auto 0', width: '100%', maxWidth: '340px' }}>
-                <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
-                <span className="watermark-text" style={{ fontSize: '0.95rem', fontFamily: "'Great Vibes', 'Brush Script MT', cursive" }}>Developer Richard Meha</span>
-                <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
-              </div>
+            <div className="login-security-badge">
+              <Shield size={14} />
+              <span>PIN disimpan terenkripsi di server</span>
             </div>
           </div>
         </div>
@@ -348,7 +315,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
   }
 
   // ── TAHAP PILIH TENANT (gedung / cabang) ──
-  if (tenantStep && authedUser) {
+  if (step === 'tenant' && authedUser) {
     return (
       <div className="login-page">
         <div className="login-bg-animation">
@@ -371,6 +338,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
             </div>
 
             {error && <div className="login-error">{error}</div>}
+            {pinNotice && <div className="login-success">{pinNotice}</div>}
 
             <div className="login-field">
               <label>Gedung / Cabang</label>
@@ -418,20 +386,13 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
               {loading ? 'Memproses...' : 'Masuk ke Lokasi'}
             </button>
 
+            <button type="button" onClick={handleBackToLogin} className="login-btn login-btn-secondary" style={{ background: 'transparent', border: '1px solid var(--border-glass)' }}>
+              <LogOut size={16} /> Keluar
+            </button>
+
             <div className="login-security-badge">
               <Shield size={14} />
-              <span>Data terisolasi per gedung</span>
-            </div>
-
-            <div className="login-footer-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', marginTop: '1.25rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
-              <p style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0, color: 'var(--text-muted)', fontSize: '0.7rem' }}>
-                <Building size={12} /> CMMDIGITAL - SISTEM MANAGEMENT MULTI-TENANT
-              </p>
-              <div className="ornamental-watermark" style={{ margin: '0.2rem auto 0', width: '100%', maxWidth: '340px' }}>
-                <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
-                <span className="watermark-text" style={{ fontSize: '0.95rem', fontFamily: "'Great Vibes', 'Brush Script MT', cursive" }}>Developer Richard Meha</span>
-                <span className="ornament-symbol" style={{ fontSize: '0.65rem', color: 'var(--color-primary)', opacity: 0.75, whiteSpace: 'nowrap' }}>✧═════•❁❀❁•═════✧</span>
-              </div>
+              <span>Data terisolasi per gedung (RLS)</span>
             </div>
           </div>
         </div>
@@ -468,6 +429,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
                   value={nrp}
                   onChange={(e) => setNrp(e.target.value)}
                   placeholder="Masukkan NRP"
+                  autoComplete="username"
                   autoFocus
                 />
               </div>
@@ -482,7 +444,8 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
                   placeholder="Masukkan PIN"
-                  maxLength={12}
+                  maxLength={72}
+                  autoComplete="current-password"
                 />
                 <button type="button" className="login-toggle-pin" onClick={() => setShowPin(!showPin)}>
                   {showPin ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -497,7 +460,7 @@ export default function LoginPage({ users: usersProp = [], onLogin, onSetup, has
 
           <div className="login-security-badge">
             <Shield size={14} />
-            <span>Aman & Terenkripsi</span>
+            <span>Autentikasi server & enkripsi PIN</span>
           </div>
 
           <div className="login-footer-text" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem', marginTop: '1.25rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>

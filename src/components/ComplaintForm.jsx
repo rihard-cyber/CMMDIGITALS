@@ -13,7 +13,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Send, Camera, User, Building, MapPin, FileText, AlertTriangle, CheckCircle, X, QrCode, ChevronRight, MessageSquare } from 'lucide-react';
 import { compressImage } from '../utils/image';
 import { registerBackHandler } from '../utils/navigation';
-import { subscribeTenants, loadComplaintByTicket } from '../utils/supabase';
+import { loadPublicTenants, loadComplaintByTicket } from '../utils/supabase';
 
 const CATEGORIES = [
   { id: 'Fasilitas', label: 'Fasilitas', icon: Building, color: '#3b82f6' },
@@ -121,26 +121,37 @@ export default function ComplaintForm({ onAddComplaint }) {
     };
   }, [step]);
 
-  // Muat daftar lokasi/gedung terdaftar. QR poster bisa membawa ?tenant=tnt_xxx.
+  // Muat daftar lokasi/gedung terdaftar lewat RPC publik (tanpa akses tabel).
+  // QR poster bisa membawa ?tenant=tnt_xxx.
   useEffect(() => {
+    let cancelled = false;
     setLoadingTenants(true);
     const urlTenant = typeof window !== 'undefined'
       ? (new URLSearchParams(window.location.search).get('tenant') || '')
       : '';
-    let unsubscribe = null;
-    unsubscribe = subscribeTenants((data) => {
-      const list = Array.isArray(data) ? data : [];
-      setTenants(list);
-      setLoadingTenants(false);
-      if (urlTenant) {
-        const match = list.find(t => t.id === urlTenant || t.slug === urlTenant);
-        if (match) {
-          setTenantId(match.id);
-          setErrors(p => ({ ...p, tenantId: '' }));
+
+    loadPublicTenants()
+      .then((list) => {
+        if (cancelled) return;
+        setTenants(Array.isArray(list) ? list : []);
+        if (urlTenant) {
+          const match = (list || []).find(t => t.id === urlTenant || t.slug === urlTenant);
+          if (match) {
+            setTenantId(match.id);
+            setErrors(p => ({ ...p, tenantId: '' }));
+          }
         }
-      }
-    }, { limit: 100 });
-    return () => { if (typeof unsubscribe === 'function') unsubscribe(); };
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        console.warn('[Complaint] Gagal memuat lokasi:', e?.message || e);
+        setTenants([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTenants(false);
+      });
+
+    return () => { cancelled = true; };
   }, []);
 
   // Handle back button to go back from track mode to main form
@@ -218,14 +229,7 @@ export default function ComplaintForm({ onAddComplaint }) {
       history: [{ status: 'Baru', timestamp: new Date().toISOString(), note: 'Komplain dibuat' }],
       waStatus: 'Belum Dikirim'
     };
-    // Simpan langsung ke localStorage sebagai jaring pengaman
-    try {
-      const existing = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
-      existing.unshift(complaint);
-      localStorage.setItem('cmdigital_complaints', JSON.stringify(existing));
-    } catch (e) {
-      console.warn('[Form] Gagal simpan langsung:', e);
-    }
+    // Form publik tidak menyimpan data ke cache perangkat bersama.
     onAddComplaint(complaint);
     setTicketId(id);
     setSubmitted(true);
@@ -237,12 +241,8 @@ export default function ComplaintForm({ onAddComplaint }) {
     const query = trackId.trim();
     setTrackLoading(true);
     try {
-      const data = JSON.parse(localStorage.getItem('cmdigital_complaints') || '[]');
-      let found = data.find(c =>
-        String(c.ticketId || '').toUpperCase() === query.toUpperCase()
-      );
-      // Cari juga di cloud agar tiket bisa dilacak dari perangkat lain
-      if (!found) found = await loadComplaintByTicket(query);
+      // Hanya lewat RPC terbatas — jangan membaca cache lokal perangkat.
+      const found = await loadComplaintByTicket(query);
       setTrackData(found || 'notfound');
     } catch {
       setTrackData('notfound');

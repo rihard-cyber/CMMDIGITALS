@@ -2,12 +2,12 @@ import React, { useState, useRef } from 'react';
 import { Download, Upload, AlertTriangle, CheckCircle, Database, RefreshCw } from 'lucide-react';
 
 const ALL_KEYS = [
-  'cmdigital_users', 'cmdigital_areas', 'cmdigital_reports', 'cmdigital_findings',
-  'cmdigital_mutasi_logs', 'cmdigital_attendance_logs', 'cmdigital_complaints', 'cmdigital_theme',
-  'cmdigital_db_version', 'cmdigital_session', 'cmdigital_login_attempts'
+  'sapujagat_users', 'sapujagat_areas', 'sapujagat_reports', 'sapujagat_findings',
+  'cmdigital_mutasi_logs', 'cmdigital_attendance_logs', 'cmdigital_complaints',
+  'cmdigital_pos_list', 'sapujagat_found_items', 'cmdigital_theme', 'cmdigital_db_version'
 ];
 
-export default function BackupRestore({ addToast, onResetUsers, onClearAllData }) {
+export default function BackupRestore({ addToast, onClearAllData }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const fileRef = useRef(null);
@@ -19,15 +19,6 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
         const val = localStorage.getItem(key);
         if (val) data[key] = JSON.parse(val);
       } catch {}
-    });
-    // Include PIN hashes
-    const pinKeys = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('cmdigital_pin_')) pinKeys.push(k);
-    }
-    pinKeys.forEach(k => {
-      try { data[k] = localStorage.getItem(k); } catch {}
     });
     return data;
   };
@@ -61,7 +52,7 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
         const data = JSON.parse(ev.target.result);
         let count = 0;
         Object.entries(data).forEach(([key, value]) => {
-          if (key.startsWith('cmdigital_pin_') || ALL_KEYS.includes(key)) {
+          if (ALL_KEYS.includes(key)) {
             localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
             count++;
           }
@@ -76,23 +67,12 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
     reader.readAsText(file);
   };
 
-  const handleResetUsers = async () => {
-    if (!window.confirm('Yakin ingin mereset semua user?')) return;
-    try {
-      if (onResetUsers) await onResetUsers();
-      setResult({ type: 'success', message: 'User berhasil direset!' });
-      if (addToast) addToast('User berhasil direset!', 'success');
-    } catch (e) {
-      setResult({ type: 'error', message: `Gagal reset: ${e.message}` });
-    }
-  };
-
   const handleClearAllData = async () => {
     if (!window.confirm('Yakin ingin menghapus SEMUA data lokal? Tindakan ini tidak bisa dibatalkan.')) return;
     try {
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const k = localStorage.key(i);
-        if (k && (k.startsWith('cmdigital_') || k.startsWith('cmdigital_pin_'))) {
+        if (k && (k.startsWith('cmdigital_') || k.startsWith('sapujagat_'))) {
           localStorage.removeItem(k);
         }
       }
@@ -180,22 +160,6 @@ export default function BackupRestore({ addToast, onResetUsers, onClearAllData }
       <div style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '1.5rem' }}>
         <h3 style={{ fontSize: '0.9rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Utilitas</h3>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={handleResetUsers}
-            disabled={busy}
-            style={{
-              background: 'transparent',
-              border: '1px solid #f59e0b',
-              color: '#f59e0b',
-              padding: '0.75rem 1.25rem',
-              borderRadius: '8px',
-              fontWeight: 600,
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.5 : 1
-            }}
-          >
-            Reset User
-          </button>
           <button
             onClick={handleClearAllData}
             disabled={busy}

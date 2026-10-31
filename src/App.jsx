@@ -15,13 +15,17 @@ import { App as CapApp } from '@capacitor/app';
 import { Geolocation } from '@capacitor/geolocation';
 import { Camera as CapCamera } from '@capacitor/camera';
 import { executeBackHandlers, registerBackHandler } from './utils/navigation';
-import { hashPin, verifyPin, validateSession, signUserData, verifyUserDataSignature, signRoleInSession, verifyRoleInSession, queryWebPermissions, checkDeviceSecurity, getGPSCoordinates, verifyGPSAntiFake } from './utils/security';
+import { queryWebPermissions, checkDeviceSecurity, getGPSCoordinates, verifyGPSAntiFake } from './utils/security';
 import SecurityCheckBlock from './components/SecurityCheckBlock';
 import { isSupabaseConfigured } from './utils/supabaseConfig';
 import { compressImage } from './utils/image';
 import db from './utils/db';
 import { hapticLight } from './utils/haptics';
-import { setCurrentTenant, getCurrentTenant, clearCurrentTenant } from './utils/supabase';
+import {
+  setCurrentTenant, getCurrentTenant, clearCurrentTenant,
+  getAuthProfile, signOutAuth, adminCreateMember, adminResetMemberPin, changeMyPin,
+  submitPublicComplaint
+} from './utils/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
 import { initSupabase,
   subscribeComplaints, addComplaintToFirestore, updateComplaintInFirestore, deleteComplaintFromFirestore,
@@ -29,7 +33,7 @@ import { initSupabase,
   subscribeFindings, addFindingToFirestore, updateFindingInFirestore, deleteFindingFromFirestore,
   subscribeAttendanceLogs, addAttendanceLogToFirestore, updateAttendanceLogInFirestore, deleteAttendanceLogFromFirestore,
   subscribeMutasiLogs, addMutasiLogToFirestore, updateMutasiLogInFirestore, deleteMutasiLogFromFirestore,
-  subscribeUsers, addUserToFirestore, updateUserInFirestore, deleteUserFromFirestore, resetUsersInFirestore,
+  subscribeUsers, updateUserInFirestore, deleteUserFromFirestore,
   subscribeAreas, addAreaToFirestore, updateAreaInFirestore, deleteAreaFromFirestore,
   subscribePosList, addPosToFirestore, updatePosInFirestore, deletePosFromFirestore,
   subscribeWAContacts, saveWAContactsToFirestore,
@@ -156,18 +160,6 @@ const cleanAndDeduplicateAreas = (rawList) => {
 const INITIAL_REPORTS = [];
 const INITIAL_FINDINGS = [];
 const INITIAL_FOUND_ITEMS = [];
-
-// ── SUPERADMIN FALLBACK ────────────────────────────────────────────────────────
-// Hanya digunakan jika localStorage DAN Firebase sama-sama kosong (instalasi baru)
-// BUKAN data default yang dimunculkan ke semua browser
-const BASE_USERS = [
-  { id: 1, nrp: '10001', nama: 'Richard', jabatan: 'Admin Super', regu: '',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60',
-    status: 'Aktif', email: '' }
-];
-
-// NRP daftar akun sistem yang tidak boleh dihapus
-const SYSTEM_NRPS = new Set(BASE_USERS.map(u => u.nrp));
 
 
 const mapDepartment = (kategori, temuanText = '') => {
@@ -370,7 +362,7 @@ export default function App() {
   const [isSecurityBypassed, setIsSecurityBypassed] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [currentTenant, setCurrentTenantState] = useState(null);
-  const [hasUsers, setHasUsers] = useState(true);
+  const [authProfile, setAuthProfile] = useState(null);
   const [firebaseUsersLoaded, setFirebaseUsersLoaded] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
   const [cyberLogs, setCyberLogs] = useState([]);
@@ -610,91 +602,103 @@ export default function App() {
     }, 800);
   };
 
-  const handleVerifyCode = () => {
+  const handleVerifyCode = async () => {
     if (verifCode === verifSentCode) {
       setVerifStep('done');
-      const updatedUsers = users.map(u =>
-        u.id === currentUser.id ? { ...u, email: newEmail } : u
-      );
-      setUsers(updatedUsers);
-      setCurrentUser(prev => ({ ...prev, email: newEmail }));
-      localStorage.setItem('sapujagat_users', JSON.stringify(updatedUsers));
-      signUserData(updatedUsers);
+      await handleUpdateUser(currentUser.id, { email: newEmail });
       addToast('Email berhasil diperbarui!', 'success');
     } else {
       setVerifError('Kode verifikasi salah. Coba lagi.');
     }
   };
 
+  // ── Pemulihan sesi Supabase Auth ─────────────────────────────────────────
+  // Sesi disimpan oleh supabase-js. Profil tenant/role SELALU dibaca ulang dari
+  // database sehingga perubahan role oleh Admin Super langsung berlaku.
   useEffect(() => {
-    const stored = localStorage.getItem('sapujagat_users');
-    const users = stored ? JSON.parse(stored) : null;
-    const hasExistingUsers = Array.isArray(users) && users.length > 0;
+    let cancelled = false;
 
-    // If Firebase configured but localStorage empty (e.g. incognito), assume users exist
-    if (!hasExistingUsers && isSupabaseConfigured()) {
-      setHasUsers(true);
-      return;
-    }
-
-    // Anti-tamper: verifikasi signature data user
-    if (hasExistingUsers) {
-      const valid = verifyUserDataSignature(users);
-      if (!valid) {
-        console.warn('[Security] Data user telah dimanipulasi! Menghapus session.');
-        localStorage.removeItem('cmdigital_session');
-        localStorage.removeItem('sapujagat_users_sig');
-        setHasUsers(false);
-        setAuthenticated(false);
+    const restoreAuth = async () => {
+      if (!isSupabaseConfigured()) {
+        if (!cancelled) setAuthenticated(false);
         return;
       }
-    }
-    setHasUsers(hasExistingUsers);
-
-    const sessionStr = localStorage.getItem('cmdigital_session');
-    if (sessionStr) {
       try {
-        const session = JSON.parse(sessionStr);
-        if (validateSession(session)) {
-          const userList = hasExistingUsers ? users : [];
-          const found = userList.find(u => u.id === session.userId);
-          if (found) {
-            // Anti-tamper: verifikasi role dalam session
-            if (session.roleToken && !verifyRoleInSession(found.id, found.jabatan, session.roleToken)) {
-              console.warn('[Security] Role user telah dimanipulasi! Logout paksa.');
-              localStorage.removeItem('cmdigital_session');
-              setAuthenticated(false);
-              return;
-            }
-            setCurrentUser(found);
-            setAuthenticated(true);
+        const { session, profile } = await getAuthProfile();
+        if (cancelled) return;
 
-            // Restore tenant aktif dari session (multi-tenant)
-            if (session.tenantId) {
-              setCurrentTenantState(session);
-              // Set tenant aktif (id tenant) untuk filter data & stamping tenant_id
-              setCurrentTenant(session.tenantId);
-            }
-
-            setShowSplash(true);
-            
-            // Restore last active route from hash or last_route, default to guard/dashboard
-            const hash = window.location.hash.replace('#/', '').replace('#', '');
-            const lastRoute = localStorage.getItem('cmdigital_last_route');
-            const defaultTab = ['Danru', 'Wadanru', 'Anggota'].includes(found.jabatan) ? 'guard-simulator' : 'dashboard';
-            const initialTab = hash || lastRoute || defaultTab;
-            
-            setCurrentTab(initialTab);
-            window.location.hash = '#/' + initialTab;
-            localStorage.setItem('cmdigital_last_route', initialTab);
-            return;
-          }
+        if (!session || !profile) {
+          setAuthenticated(false);
+          return;
         }
+
+        setAuthProfile(profile);
+
+        // Akun dengan PIN sementara wajib login ulang agar PIN lama diketahui
+        // dan bisa diverifikasi server saat mengganti PIN.
+        if (profile.mustChangePassword || profile.must_change_password) {
+          await signOutAuth().catch(() => {});
+          if (!cancelled) setAuthenticated(false);
+          return;
+        }
+
+        const storedTenant = getCurrentTenant();
+        const ownTenant = profile.tenantId || profile.tenant_id || null;
+        const isSuper = profile.jabatan === 'Admin Super';
+        const tenantAllowed = storedTenant && (isSuper || storedTenant === ownTenant);
+
+        if (!tenantAllowed) {
+          // Sesi valid tetapi tenant belum dipilih / tidak diizinkan:
+          // LoginPage akan menampilkan pemilihan lokasi.
+          setAuthenticated(false);
+          return;
+        }
+
+        let meta = null;
+        try { meta = JSON.parse(localStorage.getItem('cmdigital_tenant_meta') || 'null'); } catch (_) {}
+
+        setCurrentUser({ ...profile, tenantId: storedTenant });
+        setCurrentTenantState({
+          ...profile,
+          tenantId: storedTenant,
+          tenantNama: meta?.id === storedTenant ? meta.nama : (profile.tenantNama || null)
+        });
+        setCurrentTenant(storedTenant);
+        setAuthenticated(true);
+        setShowSplash(true);
+
+        const hash = window.location.hash.replace('#/', '').replace('#', '');
+        const lastRoute = localStorage.getItem('cmdigital_last_route');
+        const defaultTab = ['Danru', 'Wadanru', 'Anggota'].includes(profile.jabatan) ? 'guard-simulator' : 'dashboard';
+        const initialTab = hash || lastRoute || defaultTab;
+
+        setCurrentTab(initialTab);
+        window.location.hash = '#/' + initialTab;
+        localStorage.setItem('cmdigital_last_route', initialTab);
       } catch (e) {
-        localStorage.removeItem('cmdigital_session');
+        console.warn('[Auth] Gagal memulihkan sesi:', e?.message || e);
+        if (!cancelled) setAuthenticated(false);
       }
-    }
-    setAuthenticated(false);
+    };
+
+    restoreAuth();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Reaksi global saat sesi Auth berakhir (logout, token dicabut, dsb.)
+  useEffect(() => {
+    const client = initSupabase();
+    if (!client) return;
+    const { data } = client.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setAuthenticated(false);
+        setCurrentUser(null);
+        setAuthProfile(null);
+        setCurrentTenantState(null);
+        clearCurrentTenant();
+      }
+    });
+    return () => data?.subscription?.unsubscribe?.();
   }, []);
 
   // Sync tab state when browser popstate triggers (e.g. Back button in browser/PWA)
@@ -892,56 +896,9 @@ export default function App() {
     setStatusBarStyle();
   }, [theme]);
 
-  // ── Inisialisasi Users: Prioritaskan localStorage → Firebase fallback ──────────
-  // BASE_USERS HANYA digunakan jika localStorage benar-benar kosong (install baru)
-  // Data real 51 user yang sudah diinput TIDAK akan tertimpa dummy
-  const [users, setUsers] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sapujagat_users');
-      const parsed = saved ? JSON.parse(saved) : null;
-
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // ✅ Ada data real di localStorage — pakai sepenuhnya, abaikan BASE_USERS
-        // Hanya normalize PIN
-        parsed.forEach(u => {
-          const stored = localStorage.getItem(`cmdigital_pin_${u.id}`);
-          if (stored && !stored.startsWith('h')) {
-            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(stored));
-          }
-          delete u.pin;
-          // Auto-init PIN jika belum ada (default = NRP)
-          if (!localStorage.getItem(`cmdigital_pin_${u.id}`)) {
-            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(u.nrp || String(u.id)));
-          }
-        });
-        // Pastikan superadmin ada (jangan sampai terkunci)
-        const hasSuperAdmin = parsed.some(u => SYSTEM_NRPS.has(u.nrp));
-        if (!hasSuperAdmin) {
-          BASE_USERS.forEach(bu => {
-            parsed.unshift(bu);
-            if (!localStorage.getItem(`cmdigital_pin_${bu.id}`)) {
-              localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
-            }
-          });
-        }
-        localStorage.setItem('sapujagat_users', JSON.stringify(parsed));
-        signUserData(parsed);
-        return parsed;
-      }
-
-      // ❌ localStorage kosong — gunakan BASE_USERS sebagai seed minimal
-      BASE_USERS.forEach(bu => {
-        if (!localStorage.getItem(`cmdigital_pin_${bu.id}`)) {
-          localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
-        }
-      });
-      localStorage.setItem('sapujagat_users', JSON.stringify(BASE_USERS));
-      signUserData(BASE_USERS);
-      return [...BASE_USERS];
-    } catch (e) {
-      return [...BASE_USERS];
-    }
-  });
+  // Daftar user selalu berasal dari database (RLS membatasi per tenant).
+  // localStorage hanya cache tampilan, bukan sumber kebenaran autentikasi.
+  const [users, setUsers] = useState([]);
 
 
   const [areas, setAreas] = useState(() => {
@@ -1060,21 +1017,8 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('sapujagat_users', JSON.stringify(users));
-      signUserData(users);
-      
-      // Auto-initialize PINs for all users synced from Firebase/local who don't have one in localStorage
-      if (Array.isArray(users)) {
-        users.forEach(u => {
-          const stored = localStorage.getItem(`cmdigital_pin_${u.id}`);
-          if (!stored) {
-            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(u.nrp));
-          } else if (stored && !stored.startsWith('h')) {
-            localStorage.setItem(`cmdigital_pin_${u.id}`, hashPin(stored));
-          }
-        });
-      }
     } catch (e) {
-      console.error('Failed to save users to localStorage', e);
+      console.error('Failed to save users cache', e);
     }
   }, [users]);
 
@@ -1249,113 +1193,29 @@ export default function App() {
       });
     }, { limit: 500 });
     return () => unsub();
-  }, []);
+  }, [currentTenant]);
 
-  // Firebase real-time subscription untuk users
-  // ⚠️ PENTING: Firebase data TIDAK boleh hapus user lokal yang ada
-  // Firebase hanya MENAMBAH / MEMPERBARUI user yang sudah ada
+  // Daftar user real-time — hanya setelah login dan tenant aktif dipilih.
+  // RLS memastikan anggota hanya menerima user dari tenant-nya sendiri.
   useEffect(() => {
+    if (!authenticated || !currentTenant) return;
     const db = initSupabase();
     if (!db) { setFirebaseUsersLoaded(true); return; }
     const unsub = subscribeUsers((firebaseData) => {
-      if (!firebaseData || !Array.isArray(firebaseData)) { setFirebaseUsersLoaded(true); return; }
-      setUsers(prev => {
-        // Buat map dari Firebase berdasarkan id & nrp
-        const fbMap = new Map();
-        firebaseData.forEach(u => {
-          if (u.id) fbMap.set(String(u.id), u);
-          if (u.nrp) fbMap.set(`nrp_${u.nrp}`, u);
-        });
-
-        // Mulai dari data lokal (prev) — Supabase hanya update/tambah
-        const merged = prev.map(u => ({ ...u }));
-
-        firebaseData.forEach(fbUser => {
-          const existingByNrp = merged.findIndex(u => u.nrp && u.nrp === fbUser.nrp);
-          const existingById = merged.findIndex(u => String(u.id) === String(fbUser.id));
-          const existingByFbId = merged.findIndex(u => u.firebaseId && u.firebaseId === fbUser.firebaseId);
-
-          const idx = existingByFbId !== -1 ? existingByFbId 
-                    : existingByNrp !== -1 ? existingByNrp
-                    : existingById !== -1 ? existingById : -1;
-
-          if (idx !== -1) {
-            // Update user yang sudah ada — data lokal menang untuk field yang ada,
-            // kecuali tenant: data cloud adalah sumber kebenaran.
-            const cloudTenant = fbUser.tenantId || fbUser.tenant_id || null;
-            merged[idx] = {
-              ...fbUser,
-              ...merged[idx],            // data lokal menang untuk field yang ada
-              ...(cloudTenant ? { tenantId: cloudTenant, tenant_id: cloudTenant } : {}),
-              firebaseId: fbUser.firebaseId || merged[idx].firebaseId,
-              lastActive: fbUser.lastActive || merged[idx].lastActive,
-            };
-          } else {
-            // User baru dari Firebase yang belum ada di lokal — tambahkan
-            merged.push(fbUser);
-          }
-        });
-
-        try {
-          localStorage.setItem('sapujagat_users', JSON.stringify(merged));
-          signUserData(merged);
-        } catch (e) {}
-        return merged;
-      });
+      if (!Array.isArray(firebaseData)) { setFirebaseUsersLoaded(true); return; }
+      setUsers(firebaseData);
       setFirebaseUsersLoaded(true);
+      setCurrentUser(prev => {
+        if (!prev) return prev;
+        const me = firebaseData.find(u =>
+          (u.authUserId && authProfile?.authUserId && u.authUserId === authProfile.authUserId) ||
+          String(u.id) === String(prev.id)
+        );
+        return me ? { ...prev, ...me, tenantId: prev.tenantId } : prev;
+      });
     }, { limit: 1000 });
     return () => unsub();
-  }, []);
-
-  // Upload semua user lokal ke Firestore yang belum punya firebaseId
-  // Menggunakan batched upload dengan delay agar tidak rate-limit
-  useEffect(() => {
-    if (!firebaseUsersLoaded) return;
-    let cancelled = false;
-
-    const uploadMissing = async () => {
-      if (cancelled) return;
-      const tenantId = getCurrentTenant();
-      if (!tenantId) return; // Jangan pernah upload user tanpa tenant
-      const currentUsers = JSON.parse(localStorage.getItem('sapujagat_users') || '[]');
-      const missing = currentUsers.filter(u =>
-        !u.supabaseId &&
-        ((u.tenant_id || u.tenantId) === tenantId)
-      );
-      if (missing.length === 0) return;
-
-      console.log(`[Supabase] Mengupload ${missing.length} user yang belum tersync...`);
-
-      // Upload satu per satu dengan delay 300ms agar tidak flood Firebase
-      for (let i = 0; i < missing.length; i++) {
-        if (cancelled) break;
-        const u = missing[i];
-        try {
-          const fid = await addUserToFirestore({ ...u, tenant_id: tenantId, pin: undefined, shift: undefined });
-          if (fid && !cancelled) {
-            setUsers(p => {
-              const updated = p.map(x => x.id === u.id ? { ...x, supabaseId: fid, firebaseId: fid } : x);
-              try { localStorage.setItem('sapujagat_users', JSON.stringify(updated)); } catch(e) {}
-              return updated;
-            });
-          }
-        } catch(e) {
-          console.warn('[Firebase] Gagal upload user:', u.nama, e);
-        }
-        // Delay antar upload untuk hindari rate limit
-        if (i < missing.length - 1) {
-          await new Promise(r => setTimeout(r, 300));
-        }
-      }
-      // Retry setelah 30 detik jika masih ada yang gagal
-      if (!cancelled) {
-        setTimeout(uploadMissing, 30000);
-      }
-    };
-
-    uploadMissing();
-    return () => { cancelled = true; };
-  }, [firebaseUsersLoaded, currentTenant]);
+  }, [authenticated, currentTenant, authProfile?.authUserId]);
 
 
   // Firebase real-time subscription untuk areas/checkpoints (hanya tenant aktif)
@@ -1590,7 +1450,6 @@ export default function App() {
         const updated = prev.map(u => u.id === currentUser.id ? { ...u, lastActive: nowStr } : u);
         try {
           localStorage.setItem('sapujagat_users', JSON.stringify(updated));
-          signUserData(updated);
         } catch (e) {}
         return updated;
       });
@@ -2184,45 +2043,19 @@ export default function App() {
   };
 
   const handleAddComplaint = async (complaint) => {
-    // Form publik mengirim tenant_id dari pilihan lokasi; form internal memakai tenant aktif.
+    // Form komplain publik: pilih tenant eksplisit, kirim lewat RPC anon yang
+    // tervalidasi. Tidak ada akses tabel langsung dan tidak ada upload Storage.
     const tenantId = complaint?.tenant_id || complaint?.tenantId || getCurrentTenant();
     if (!tenantId) {
       addToast('Lokasi/gedung komplain belum dipilih. Silakan pilih lokasi terlebih dahulu.', 'danger');
       return;
     }
-    let complaintData = { ...complaint, tenant_id: tenantId };
-    setComplaints(prev => {
-      const updated = [complaintData, ...prev];
-      try { localStorage.setItem('cmdigital_complaints', JSON.stringify(updated)); } catch (e) {}
-      return updated;
-    });
-    addToast(`Komplain ${complaint.ticketId} berhasil dikirim!`, 'success');
-    
-    try {
-      if (complaintData.photos && complaintData.photos.length > 0) {
-        const uploadedPhotos = [];
-        for (let i = 0; i < complaintData.photos.length; i++) {
-          const p = complaintData.photos[i];
-          if (p.startsWith('data:image')) {
-             const photoUrl = await uploadPhoto(p, `complaints/${complaintData.id}_${i}.jpg`);
-             uploadedPhotos.push(photoUrl);
-          } else {
-             uploadedPhotos.push(p);
-          }
-        }
-        complaintData.photos = uploadedPhotos;
-        setComplaints(prev => prev.map(c => c.id === complaintData.id ? { ...c, photos: uploadedPhotos } : c));
-      }
 
-      addComplaintToFirestore(complaintData).then(fid => {
-        if (fid) {
-          setComplaints(prev => prev.map(c =>
-            c.id === complaintData.id ? { ...c, supabaseId: fid, firebaseId: fid } : c
-          ));
-        }
-      }).catch(e => addToast(`Gagal sync komplain: ${e.message}`, 'warning'));
+    try {
+      await submitPublicComplaint({ ...complaint, tenant_id: tenantId });
+      addToast(`Komplain ${complaint.ticketId} berhasil dikirim!`, 'success');
     } catch (err) {
-      addToast(`Gagal upload foto komplain: ${err.message}`, 'danger');
+      addToast(`Gagal mengirim komplain: ${err.message || err}`, 'danger');
     }
   };
 
@@ -2373,96 +2206,120 @@ export default function App() {
     saveWAContactsToFirestore(contacts);
   };
 
-  const handleAddUser = (newUser) => {
-    const userId = Date.now() + Math.floor(Math.random() * 1000);
-    const userData = {
-      id: userId,
-      nama: newUser.nama,
-      nrp: newUser.nrp,
-      jabatan: newUser.jabatan,
-      regu: newUser.regu || '',
-      shift: newUser.shift || 'Pagi',
-      nomorHp: newUser.nomorHp || '',
-      status: newUser.status || 'Aktif',
-      avatar: newUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=60',
-      email: newUser.email || '',
-      tenant_id: getCurrentTenant()
-    };
-    setUsers(prev => [...prev, userData]);
-    addUserToFirestore(userData).then(fid => {
-      if (fid) {
-        setUsers(prev => prev.map(u =>
-          u.id === userId ? { ...u, supabaseId: fid, firebaseId: fid } : u
-        ));
-      }
-    }).catch(e => addToast(`Gagal sync user baru ke Cloud: ${e.message}`, 'warning'));
-    if (newUser.pin) {
-      localStorage.setItem(`cmdigital_pin_${userId}`, hashPin(newUser.pin));
-    }
-    addToast(`Anggota baru ${newUser.nama} (${newUser.jabatan}) berhasil didaftarkan!`, 'success');
+  const memberErrorMessage = (e) => {
+    const msg = String(e?.message || e || '');
+    if (/nrp_duplicate|member_duplicate|duplicate key/i.test(msg)) return 'NRP sudah terdaftar. Gunakan NRP lain.';
+    if (/nrp_invalid/i.test(msg)) return 'NRP tidak valid (minimal 3 karakter: huruf/angka/titik/strip).';
+    if (/tenant_invalid/i.test(msg)) return 'Lokasi/tenant tidak valid. Pilih lokasi terlebih dahulu.';
+    if (/forbidden/i.test(msg)) return 'Hanya Admin Super yang boleh mengelola anggota.';
+    if (/member_not_found/i.test(msg)) return 'Anggota tidak ditemukan.';
+    if (/pin_invalid|pin_too_short/i.test(msg)) return 'PIN sementara minimal 4 karakter.';
+    if (/self_delete_forbidden/i.test(msg)) return 'Anda tidak dapat menghapus akun sendiri.';
+    if (/last_super_admin/i.test(msg)) return 'Admin Super terakhir tidak boleh dihapus.';
+    if (/email_duplicate/i.test(msg)) return 'Email akun sudah dipakai.';
+    return msg || 'Terjadi kesalahan.';
   };
 
-  const handleUpdateUser = (userId, updates) => {
-    setUsers(prev => {
-      const user = prev.find(u => u.id === userId);
-      if (user) {
-        const fid = user.supabaseId || user.firebaseId;
-        if (fid) {
-          updateUserInFirestore(fid, updates).catch(e =>
-            addToast(`Gagal update user di Cloud: ${e.message}`, 'warning')
-          );
-        }
-      }
-      const updated = prev.map(u => u.id === userId ? { ...u, ...updates } : u);
-      try { localStorage.setItem('sapujagat_users', JSON.stringify(updated)); } catch(e) {}
-      return updated;
-    });
-    if (currentUser && currentUser.id === userId) {
-      setCurrentUser(prev => ({ ...prev, ...updates }));
+  const handleAddUser = async (newUser) => {
+    const tenantId = getCurrentTenant();
+    if (!tenantId) {
+      addToast('Pilih lokasi/tenant terlebih dahulu.', 'danger');
+      return false;
     }
-    addToast('Data user berhasil diperbarui!', 'success');
+    try {
+      const tempPin = newUser.pin || newUser.nrp;
+      const profile = await adminCreateMember({
+        nrp: newUser.nrp,
+        nama: newUser.nama,
+        jabatan: newUser.jabatan,
+        regu: newUser.regu,
+        nomorHp: newUser.nomorHp,
+        tenantId,
+        tempPin
+      });
+      setUsers(prev => [
+        ...prev.filter(u => String(u.nrp) !== String(profile.nrp)),
+        profile
+      ]);
+      addToast(
+        `Anggota ${profile.nama} berhasil dibuat. PIN sementara: ${tempPin} — wajib diganti saat login pertama.`,
+        'success'
+      );
+      return true;
+    } catch (e) {
+      addToast(`Gagal menambah anggota: ${memberErrorMessage(e)}`, 'danger');
+      return false;
+    }
+  };
+
+  const handleUpdateUser = async (userId, updates) => {
+    const user = users.find(u => String(u.id) === String(userId));
+    const sid = user?.supabaseId || user?.firebaseId;
+    if (!sid) {
+      addToast('Data anggota belum tersinkron ke server.', 'danger');
+      return false;
+    }
+    try {
+      const updated = await updateUserInFirestore(sid, updates);
+      const merged = updated || updates;
+      setUsers(prev => prev.map(u => String(u.id) === String(userId) ? { ...u, ...merged } : u));
+      if (currentUser && String(currentUser.id) === String(userId)) {
+        setCurrentUser(prev => ({ ...prev, ...merged }));
+      }
+      addToast('Data user berhasil diperbarui!', 'success');
+      return true;
+    } catch (e) {
+      addToast(`Gagal update user: ${memberErrorMessage(e)}`, 'danger');
+      return false;
+    }
   };
 
   const handleDeleteUser = (userId) => {
-    const user = users.find(u => u.id === userId);
+    const user = users.find(u => String(u.id) === String(userId));
     if (!user) return;
     setConfirmDelete({
       title: 'Hapus User',
-      message: <>Yakin ingin menghapus <strong>{user.nama}</strong> (NRP: {user.nrp})?<br/>Tindakan ini tidak bisa dibatalkan.</>,
+      message: <>Yakin ingin menghapus <strong>{user.nama}</strong> (NRP: {user.nrp})?<br/>Akun login dan seluruh aksesnya akan dihapus permanen.</>,
       confirmLabel: 'Hapus',
       variant: 'danger',
       onConfirm: async () => {
         setConfirmDelete(null);
         try {
-          const fid = user.supabaseId || user.firebaseId;
-          if (fid) await deleteUserFromFirestore(fid);
-          setUsers(prev => {
-            const filtered = prev.filter(u => u.id !== userId);
-            try { localStorage.setItem('sapujagat_users', JSON.stringify(filtered)); } catch(e) {}
-            return filtered;
-          });
+          const sid = user.supabaseId || user.firebaseId;
+          if (!sid) throw new Error('Data anggota belum tersinkron ke server.');
+          await deleteUserFromFirestore(sid);
+          setUsers(prev => prev.filter(u => String(u.id) !== String(userId)));
           addToast(`User ${user.nama} berhasil dihapus!`, 'success');
         } catch (e) {
-          addToast(`Gagal menghapus ${user.nama} dari Cloud: ${e.message}`, 'danger');
+          addToast(`Gagal menghapus ${user.nama}: ${memberErrorMessage(e)}`, 'danger');
         }
       },
       onCancel: () => setConfirmDelete(null),
     });
   };
 
-  const handleResetUsers = async () => {
-    addToast('Mereset database user di Firestore...', 'info');
-    const success = await resetUsersInFirestore(BASE_USERS);
-    if (success) {
-      addToast('Database user di Firestore berhasil direset!', 'success');
-      setUsers(BASE_USERS);
-      localStorage.setItem('sapujagat_users', JSON.stringify(BASE_USERS));
-      signUserData(BASE_USERS);
-      BASE_USERS.forEach(bu => {
-        localStorage.setItem(`cmdigital_pin_${bu.id}`, hashPin(bu.nrp));
-      });
-    } else {
-      addToast('Gagal mereset database user di Firestore. Periksa koneksi internet.', 'danger');
+  const handleResetPin = async (userId, tempPin) => {
+    const user = users.find(u => String(u.id) === String(userId));
+    const sid = user?.supabaseId || user?.firebaseId;
+    if (!sid) {
+      addToast('Data anggota belum tersinkron ke server.', 'danger');
+      return false;
+    }
+    try {
+      await adminResetMemberPin(sid, tempPin);
+      setUsers(prev => prev.map(u =>
+        String(u.id) === String(userId)
+          ? { ...u, mustChangePassword: true, must_change_password: true }
+          : u
+      ));
+      addToast(
+        `PIN ${user.nama} direset. PIN sementara: ${tempPin} — anggota wajib menggantinya saat login.`,
+        'success'
+      );
+      return true;
+    } catch (e) {
+      addToast(`Gagal reset PIN: ${memberErrorMessage(e)}`, 'danger');
+      return false;
     }
   };
 
@@ -2507,8 +2364,6 @@ export default function App() {
       
       setUsers(updatedUsers);
       setCurrentUser(prev => ({ ...prev, avatar: finalAvatar }));
-      localStorage.setItem('sapujagat_users', JSON.stringify(updatedUsers));
-      signUserData(updatedUsers);
       
       if (currentUser.supabaseId || currentUser.firebaseId) {
         await updateUserInFirestore(currentUser.supabaseId || currentUser.firebaseId, { avatar: finalAvatar });
@@ -2536,48 +2391,52 @@ export default function App() {
   const handleUpdatePin = async () => {
     setProfileError('');
     setProfileSuccess('');
-    
+
     if (!currentPin || !newPin || !confirmPin) {
       setProfileError('Semua field PIN harus diisi.');
       return;
     }
-    
-    const storedPinHash = localStorage.getItem(`cmdigital_pin_${currentUser.id}`);
-    
-    if (storedPinHash && !verifyPin(currentPin, storedPinHash)) {
-      setProfileError('PIN saat ini salah.');
+    if (newPin.length < 6) {
+      setProfileError('PIN baru minimal 6 karakter.');
       return;
     }
-    
-    if (newPin.length < 4) {
-      setProfileError('PIN baru minimal 4 karakter.');
-      return;
-    }
-    
     if (newPin !== confirmPin) {
       setProfileError('Konfirmasi PIN baru tidak cocok.');
       return;
     }
-    
+    if (newPin === currentPin) {
+      setProfileError('PIN baru harus berbeda dari PIN lama.');
+      return;
+    }
+
     try {
-      const hashed = hashPin(newPin);
-      localStorage.setItem(`cmdigital_pin_${currentUser.id}`, hashed);
-      
+      await changeMyPin(currentPin, newPin);
       setProfileSuccess('PIN berhasil diperbarui!');
       setCurrentPin('');
       setNewPin('');
       setConfirmPin('');
+      setCurrentUser(prev => prev ? {
+        ...prev,
+        mustChangePassword: false,
+        must_change_password: false
+      } : prev);
       addToast('PIN keamanan berhasil diperbarui!', 'success');
     } catch (e) {
-      console.error(e);
-      setProfileError('Gagal memperbarui PIN.');
+      const msg = String(e?.message || '');
+      if (/current_pin_invalid/i.test(msg)) setProfileError('PIN saat ini salah.');
+      else if (/pin_weak/i.test(msg)) setProfileError('PIN baru minimal 6 karakter dan tidak boleh sama dengan NRP.');
+      else if (/pin_same/i.test(msg)) setProfileError('PIN baru harus berbeda dari PIN lama.');
+      else setProfileError(`Gagal memperbarui PIN: ${msg || 'kesalahan server'}`);
     }
   };
 
   const handleLogin = (user) => {
-    const synced = users.find(u => u.id === user.id || u.nrp === user.nrp);
-    const finalUser = synced || user;
-    setCurrentUser(finalUser);
+    setAuthProfile(user);
+    setCurrentUser(user);
+    setUsers(prev => {
+      const exists = prev.some(u => String(u.id) === String(user.id));
+      return exists ? prev.map(u => String(u.id) === String(user.id) ? { ...u, ...user } : u) : [...prev, user];
+    });
     setAuthenticated(true);
     setShowSplash(true);
 
@@ -2594,28 +2453,33 @@ export default function App() {
     localStorage.setItem('cmdigital_last_route', targetTab);
   };
 
-  const handleSetup = (user) => {
-    setCurrentUser(user);
-    setAuthenticated(true);
-    setShowSplash(true);
-    setHasUsers(true);
-    setCurrentTab('dashboard');
-    window.location.hash = '#/dashboard';
-    localStorage.setItem('cmdigital_last_route', 'dashboard');
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('cmdigital_session');
+  const handleLogout = async () => {
+    await signOutAuth().catch(() => {});
     localStorage.removeItem('cmdigital_last_route');
     localStorage.removeItem('cmdigital_active_tenant');
+    localStorage.removeItem('cmdigital_tenant_meta');
+    // Hapus cache data operasional agar tidak terbaca oleh tenant berikutnya.
+    [
+      'sapujagat_users', 'sapujagat_areas', 'sapujagat_reports',
+      'sapujagat_findings', 'sapujagat_found_items', 'cmdigital_complaints',
+      'cmdigital_attendance_logs', 'cmdigital_mutasi_logs', 'cmdigital_pos_list'
+    ].forEach(key => localStorage.removeItem(key));
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cmdigital_pin_')) localStorage.removeItem(k);
+    }
+    localStorage.removeItem('cmdigital_session');
+    localStorage.removeItem('sapujagat_users_sig');
+
     window.location.hash = '#/login';
     setAuthenticated(false);
     setCurrentUser(null);
+    setAuthProfile(null);
     setCurrentTenantState(null);
     clearCurrentTenant();
     setShowSplash(false);
     addToast('Anda telah logout', 'info');
-    // Muat ulang penuh agar daftar user semua tenant kembali segar untuk login berikutnya
+    // Muat ulang penuh agar state dan cache lama benar-benar bersih.
     setTimeout(() => window.location.reload(), 150);
   };
 
@@ -2781,7 +2645,7 @@ export default function App() {
         position: 'relative'
       }}>
         <DeveloperWatermarkBackground theme={theme} />
-        <LoginPage users={users} onLogin={handleLogin} onSetup={handleSetup} hasUsers={hasUsers} firebaseUsersLoaded={firebaseUsersLoaded} />
+        <LoginPage onLogin={handleLogin} initialProfile={authProfile} />
         <PWAInstallPrompt />
       </div>
     );
@@ -3213,7 +3077,7 @@ export default function App() {
           )}
 
           {currentTab === 'user-management' && (isGodMode || isAdmin) && (
-            <UserManagement users={users} currentUser={currentUser} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onSaveWAContacts={handleSaveWAContacts} />
+            <UserManagement users={users} currentUser={currentUser} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onResetPin={handleResetPin} onSaveWAContacts={handleSaveWAContacts} />
           )}
 
           {currentTab === 'roster' && (isGodMode || isAdmin) && (
@@ -3222,7 +3086,7 @@ export default function App() {
 
           {currentTab === 'backup' && isSuperAdmin && (
             <div style={{ padding: '1rem 0' }}>
-              <BackupRestore addToast={addToast} onResetUsers={handleResetUsers} onClearAllData={handleClearAllData} />
+              <BackupRestore addToast={addToast} onClearAllData={handleClearAllData} />
             </div>
           )}
 
@@ -3471,6 +3335,9 @@ export default function App() {
               {/* Tab: PIN */}
               {activeProfileTab === 'pin' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                    PIN minimal 6 karakter, tidak boleh sama dengan NRP, dan diversifikasi di server.
+                  </div>
                   <div className="form-field">
                     <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}><Lock size={12} /> PIN Keamanan Saat Ini</label>
                     <input 
